@@ -37,8 +37,15 @@ import {
   startOfYear,
 } from "date-fns";
 import Layout from "../components/Layout";
+import { useUserCurrency } from "../hooks/useUserCurrency";
+import { formatCurrency, formatCurrencyWithCode } from "../lib/currency";
 import { listSavingsGoals } from "../lib/finance";
-import { formatTransactionDate, listTransactions, parseTransactionDate } from "../lib/transactions";
+import {
+  formatTransactionDate,
+  getTransactionAmountInCurrency,
+  listTransactions,
+  parseTransactionDate,
+} from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { SavingsGoal } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -47,6 +54,7 @@ const CHART_COLORS = ["#2d6a4f", "#52b788", "#74c69d", "#95d5b2", "#b7e4c7", "#4
 
 export default function Home() {
   const { user } = useAuth();
+  const currency = useUserCurrency();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,26 +127,28 @@ export default function Home() {
     () =>
       transactions.reduce(
         (sum, transaction) =>
-          transaction.type === "income" ? sum + transaction.amount : sum - transaction.amount,
+          transaction.type === "income"
+            ? sum + getTransactionAmountInCurrency(transaction, currency)
+            : sum - getTransactionAmountInCurrency(transaction, currency),
         0,
       ),
-    [transactions],
+    [currency, transactions],
   );
 
   const monthlyIncome = useMemo(
     () =>
       currentMonthTransactions
         .filter((transaction) => transaction.type === "income")
-        .reduce((sum, transaction) => sum + transaction.amount, 0),
-    [currentMonthTransactions],
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
+    [currency, currentMonthTransactions],
   );
 
   const monthlyExpenses = useMemo(
     () =>
       currentMonthTransactions
         .filter((transaction) => transaction.type === "expense")
-        .reduce((sum, transaction) => sum + transaction.amount, 0),
-    [currentMonthTransactions],
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
+    [currency, currentMonthTransactions],
   );
 
   const expensesByCategory = useMemo(() => {
@@ -157,7 +167,8 @@ export default function Home() {
     );
 
     const byCategory = expenseTransactions.reduce<Record<string, number>>((acc, transaction) => {
-      acc[transaction.category] = (acc[transaction.category] ?? 0) + transaction.amount;
+      acc[transaction.category] =
+        (acc[transaction.category] ?? 0) + getTransactionAmountInCurrency(transaction, currency);
       return acc;
     }, {});
 
@@ -166,7 +177,7 @@ export default function Home() {
       value,
       color: CHART_COLORS[index % CHART_COLORS.length],
     }));
-  }, [timePeriod, transactions]);
+  }, [currency, timePeriod, transactions]);
 
   const timeSeriesData = useMemo(() => {
     const now = new Date();
@@ -185,10 +196,10 @@ export default function Home() {
           period: format(day, "EEE"),
           income: sameDay
             .filter((transaction) => transaction.type === "income")
-            .reduce((sum, transaction) => sum + transaction.amount, 0),
+            .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
           expenses: sameDay
             .filter((transaction) => transaction.type === "expense")
-            .reduce((sum, transaction) => sum + transaction.amount, 0),
+            .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
         };
       });
     }
@@ -207,10 +218,10 @@ export default function Home() {
           period: format(month, "MMM"),
           income: inMonth
             .filter((transaction) => transaction.type === "income")
-            .reduce((sum, transaction) => sum + transaction.amount, 0),
+            .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
           expenses: inMonth
             .filter((transaction) => transaction.type === "expense")
-            .reduce((sum, transaction) => sum + transaction.amount, 0),
+            .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
         };
       });
     }
@@ -224,14 +235,14 @@ export default function Home() {
           acc[period] = { period, income: 0, expenses: 0 };
         }
         if (transaction.type === "income") {
-          acc[period].income += transaction.amount;
+          acc[period].income += getTransactionAmountInCurrency(transaction, currency);
         } else {
-          acc[period].expenses += transaction.amount;
+          acc[period].expenses += getTransactionAmountInCurrency(transaction, currency);
         }
         return acc;
       }, {}),
     );
-  }, [currentMonthTransactions, timePeriod, transactions]);
+  }, [currency, currentMonthTransactions, timePeriod, transactions]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -275,21 +286,21 @@ export default function Home() {
             <Wallet className="size-5" />
             <span className="text-sm">Total Balance</span>
           </div>
-          <div className="text-4xl mb-4">${balance.toFixed(2)}</div>
+          <div className="text-4xl mb-4">{formatCurrency(balance, currency)}</div>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="size-4" />
                 <span className="text-xs opacity-90">Income</span>
               </div>
-              <div className="text-xl">${monthlyIncome.toFixed(2)}</div>
+              <div className="text-xl">{formatCurrency(monthlyIncome, currency)}</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingDown className="size-4" />
                 <span className="text-xs opacity-90">Expenses</span>
               </div>
-              <div className="text-xl">${monthlyExpenses.toFixed(2)}</div>
+              <div className="text-xl">{formatCurrency(monthlyExpenses, currency)}</div>
             </div>
           </div>
         </div>
@@ -345,7 +356,7 @@ export default function Home() {
                 </h3>
                 {expensesByCategory.length === 0 ? (
                   <div className="h-[250px] flex flex-col items-center justify-center rounded-lg bg-muted/40 text-center">
-                    <div className="text-4xl text-primary mb-2">$0</div>
+                    <div className="text-4xl text-primary mb-2">{formatCurrency(0, currency)}</div>
                     <p className="text-sm text-muted-foreground">No expense data for this period.</p>
                   </div>
                 ) : (
@@ -357,7 +368,7 @@ export default function Home() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, value }) => `${name}: $${value}`}
+                          label={({ name, value }) => `${name}: ${formatCurrency(Number(value), currency)}`}
                           outerRadius={80}
                           dataKey="value"
                         >
@@ -371,7 +382,7 @@ export default function Home() {
                 )}
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {expensesByCategory.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">$0 total</div>
+                    <div className="text-sm text-muted-foreground">{formatCurrency(0, currency)} total</div>
                   ) : (
                     expensesByCategory.map((category, index) => (
                       <div key={`legend-${category.name}-${index}`} className="flex items-center gap-2">
@@ -448,10 +459,14 @@ export default function Home() {
                           <div className="text-sm text-muted-foreground">
                             {transaction.category} • {formatTransactionDate(transaction.occurredOn)}
                           </div>
+                          <div className="text-xs text-muted-foreground">
+                            Paid in {formatCurrencyWithCode(transaction.originalAmount, transaction.currency)}
+                          </div>
                         </div>
                       </div>
                       <div className={transaction.type === "income" ? "text-primary" : "text-foreground"}>
-                        {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                        {transaction.type === "income" ? "+" : "-"}
+                        {formatCurrency(getTransactionAmountInCurrency(transaction, currency), currency)}
                       </div>
                     </div>
                   ))
@@ -466,7 +481,7 @@ export default function Home() {
                 <span className="text-3xl">{pinnedGoal?.emoji ?? "🎯"}</span>
               </div>
               <div className="text-xs text-muted-foreground">Goal!</div>
-              <div className="text-sm font-medium mt-1">{pinnedGoal ? `$${savingsGoal}` : "No goal pinned"}</div>
+              <div className="text-sm font-medium mt-1">{pinnedGoal ? formatCurrency(savingsGoal, currency) : "No goal pinned"}</div>
             </div>
 
             <div className="relative flex-1 w-16 min-h-[400px] rounded-full overflow-hidden bg-[#E8D7B8] shadow-inner border-2 border-[#D4C5A9]">
@@ -529,10 +544,10 @@ export default function Home() {
 
             <div className="mt-4 text-center">
               <div className="text-xs text-muted-foreground">Start</div>
-              <div className="text-sm">$0</div>
+              <div className="text-sm">{formatCurrency(0, currency)}</div>
               <div className="mt-3 bg-accent/30 px-3 py-2 rounded-lg max-w-[140px]">
                 <p className="text-xs">
-                  {pinnedGoal ? `$${(savingsGoal - currentSavings).toFixed(2)} to go! ${pinnedGoal.emoji}` : "Pin a goal in Budget & Goals"}
+                  {pinnedGoal ? `${formatCurrency(savingsGoal - currentSavings, currency)} to go! ${pinnedGoal.emoji}` : "Pin a goal in Budget & Goals"}
                 </p>
               </div>
             </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Edit2, X, Calendar, DollarSign, AlertCircle } from "lucide-react";
 import Layout from "../components/Layout";
+import { useUserCurrency } from "../hooks/useUserCurrency";
+import { formatCurrency } from "../lib/currency";
 import {
   createSubscription,
   listSubscriptions,
@@ -38,6 +40,7 @@ const emptySubscription: Omit<Subscription, "userId" | "createdAt"> = {
 
 export default function Subscriptions() {
   const { user } = useAuth();
+  const currency = useUserCurrency();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -167,7 +170,7 @@ export default function Subscriptions() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-muted-foreground text-sm mb-1">Total Monthly Cost</p>
-              <h1 className="text-4xl font-bold text-primary">${totalMonthlyCost.toFixed(2)}</h1>
+              <h1 className="text-4xl font-bold text-primary">{formatCurrency(totalMonthlyCost, currency)}</h1>
               <p className="text-sm text-muted-foreground mt-2">
                 {subscriptions.length} active subscription{subscriptions.length !== 1 ? "s" : ""}
               </p>
@@ -223,7 +226,7 @@ export default function Subscriptions() {
                         <DollarSign className="size-4 text-muted-foreground" />
                         <span className="text-sm">
                           <span className="font-medium">Monthly Cost</span>
-                          <span className="ml-2 text-primary font-semibold">${subscription.monthlyCost.toFixed(2)}</span>
+                          <span className="ml-2 text-primary font-semibold">{formatCurrency(subscription.monthlyCost, currency)}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

@@ -278,6 +278,7 @@ export default function Settings() {
       setSubscriptionReminders(saved.subscriptionReminders);
       setWeeklySummary(saved.weeklySummary);
       setSavingsMilestones(saved.savingsMilestones);
+      window.dispatchEvent(new Event("settingsUpdated"));
     } catch (error) {
       setErrorNotification(error instanceof Error ? error.message : "Failed to update settings");
     }

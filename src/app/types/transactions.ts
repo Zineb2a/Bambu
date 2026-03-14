@@ -3,6 +3,8 @@ export interface Transaction {
   userId: string;
   name: string;
   amount: number;
+  currency: string;
+  originalAmount: number;
   category: string;
   occurredOn: string;
   type: "income" | "expense";
@@ -14,6 +16,8 @@ export interface Transaction {
 export interface TransactionInput {
   name: string;
   amount: number;
+  currency?: string;
+  originalAmount?: number;
   category: string;
   occurredOn: string;
   type: "income" | "expense";

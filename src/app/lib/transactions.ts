@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { supabase } from "../../lib/supabase";
+import { convertCurrency } from "./currency";
 import type { Transaction, TransactionInput } from "../types/transactions";
 
 interface TransactionRow {
@@ -7,6 +8,8 @@ interface TransactionRow {
   user_id: string;
   name: string;
   amount: number;
+  currency: string | null;
+  original_amount: number | null;
   category: string;
   occurred_on: string;
   type: "income" | "expense";
@@ -20,6 +23,8 @@ const transactionSelect = `
   user_id,
   name,
   amount,
+  currency,
+  original_amount,
   category,
   occurred_on,
   type,
@@ -34,6 +39,8 @@ function mapTransaction(row: TransactionRow): Transaction {
     userId: row.user_id,
     name: row.name,
     amount: Number(row.amount),
+    currency: row.currency ?? "USD",
+    originalAmount: Number(row.original_amount ?? row.amount),
     category: row.category,
     occurredOn: row.occurred_on,
     type: row.type,
@@ -49,6 +56,10 @@ export function formatTransactionDate(date: string) {
 
 export function parseTransactionDate(date: string) {
   return parseISO(date);
+}
+
+export function getTransactionAmountInCurrency(transaction: Transaction, currency: string) {
+  return convertCurrency(transaction.originalAmount, transaction.currency, currency);
 }
 
 export async function listTransactions(userId: string) {
@@ -71,6 +82,8 @@ export async function createTransaction(userId: string, input: TransactionInput)
     user_id: userId,
     name: input.name,
     amount: input.amount,
+    currency: input.currency ?? "USD",
+    original_amount: input.originalAmount ?? input.amount,
     category: input.category,
     occurred_on: input.occurredOn,
     type: input.type,
@@ -99,6 +112,8 @@ export async function updateTransaction(
   const payload = {
     ...(updates.name !== undefined ? { name: updates.name } : {}),
     ...(updates.amount !== undefined ? { amount: updates.amount } : {}),
+    ...(updates.currency !== undefined ? { currency: updates.currency } : {}),
+    ...(updates.originalAmount !== undefined ? { original_amount: updates.originalAmount } : {}),
     ...(updates.category !== undefined ? { category: updates.category } : {}),
     ...(updates.occurredOn !== undefined ? { occurred_on: updates.occurredOn } : {}),
     ...(updates.type !== undefined ? { type: updates.type } : {}),

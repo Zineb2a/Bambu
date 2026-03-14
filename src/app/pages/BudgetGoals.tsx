@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { endOfMonth, isWithinInterval, startOfMonth } from "date-fns";
 import Layout from "../components/Layout";
+import { useUserCurrency } from "../hooks/useUserCurrency";
+import { formatCurrency } from "../lib/currency";
 import {
   createBudgetCategory,
   createSavingsGoal,
@@ -33,8 +35,7 @@ import {
   updateBudgetCategory,
   updateSavingsGoal,
 } from "../lib/finance";
-import { listTransactions } from "../lib/transactions";
-import { parseTransactionDate } from "../lib/transactions";
+import { getTransactionAmountInCurrency, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { BudgetCategory, SavingsGoal } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -73,6 +74,7 @@ interface BudgetCategoryWithSpent extends BudgetCategory {
 
 export default function BudgetGoals() {
   const { user } = useAuth();
+  const currency = useUserCurrency();
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -156,9 +158,9 @@ export default function BudgetGoals() {
       ...category,
       spent: monthlyExpenses
         .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
-        .reduce((sum, transaction) => sum + transaction.amount, 0),
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
     }));
-  }, [categories, transactions]);
+  }, [categories, currency, transactions]);
 
   const totalBudget = categoriesWithSpent.reduce((sum, category) => sum + category.budget, 0);
   const totalSpent = categoriesWithSpent.reduce((sum, category) => sum + category.spent, 0);
@@ -305,8 +307,8 @@ export default function BudgetGoals() {
               <Target className="size-5" />
               <h3 className="text-white">Savings Goals</h3>
             </div>
-            <div className="text-3xl mb-1">${totalGoalsSaved}</div>
-            <div className="text-white/80 text-sm">of ${totalGoalsTarget} total</div>
+            <div className="text-3xl mb-1">{formatCurrency(totalGoalsSaved, currency)}</div>
+            <div className="text-white/80 text-sm">of {formatCurrency(totalGoalsTarget, currency)} total</div>
             <div className="mt-3 w-full bg-white/20 rounded-full h-2">
               <div
                 className="h-full bg-white rounded-full transition-all"
@@ -320,8 +322,8 @@ export default function BudgetGoals() {
               <DollarSign className="size-5 text-primary" />
               <h3>Monthly Budget</h3>
             </div>
-            <div className="text-3xl mb-1">${totalSpent.toFixed(2)}</div>
-            <div className="text-muted-foreground text-sm">of ${totalBudget} budget</div>
+            <div className="text-3xl mb-1">{formatCurrency(totalSpent, currency)}</div>
+            <div className="text-muted-foreground text-sm">of {formatCurrency(totalBudget, currency)} budget</div>
             <div className="mt-3 w-full bg-muted rounded-full h-2">
               <div
                 className={`h-full rounded-full transition-all ${
@@ -440,7 +442,7 @@ export default function BudgetGoals() {
                               <div>
                                 <div className="font-medium">{goal.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  ${goal.currentAmount} / ${goal.targetAmount}
+                                  {formatCurrency(goal.currentAmount, currency)} / {formatCurrency(goal.targetAmount, currency)}
                                 </div>
                               </div>
                             </div>
@@ -484,7 +486,7 @@ export default function BudgetGoals() {
                           <div className="mt-2 flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">{progress.toFixed(0)}% complete</span>
                             <span className="text-muted-foreground">
-                              ${(goal.targetAmount - goal.currentAmount).toFixed(2)} to go
+                              {formatCurrency(goal.targetAmount - goal.currentAmount, currency)} to go
                             </span>
                           </div>
                         </>
@@ -583,7 +585,7 @@ export default function BudgetGoals() {
                               <div>
                                 <div className="font-medium">{category.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  ${category.spent.toFixed(2)} / ${category.budget}
+                                  {formatCurrency(category.spent, currency)} / {formatCurrency(category.budget, currency)}
                                 </div>
                               </div>
                             </div>
@@ -617,9 +619,9 @@ export default function BudgetGoals() {
                           <div className="text-sm text-muted-foreground mt-2 flex items-center justify-between">
                             <span>{percentage.toFixed(1)}% used</span>
                             {isOverBudget ? (
-                              <span className="text-destructive">⚠️ ${(category.spent - category.budget).toFixed(2)} over</span>
+                              <span className="text-destructive">⚠️ {formatCurrency(category.spent - category.budget, currency)} over</span>
                             ) : (
-                              <span className="text-primary">${(category.budget - category.spent).toFixed(2)} left</span>
+                              <span className="text-primary">{formatCurrency(category.budget - category.spent, currency)} left</span>
                             )}
                           </div>
                         </>

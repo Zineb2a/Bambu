@@ -6,7 +6,7 @@ import NotificationsPanel from "./NotificationsPanel";
 import AddTransactionModal from "./AddTransactionModal";
 import { useAuth } from "../providers/AuthProvider";
 import { createTransaction } from "../lib/transactions";
-import { getUserProfile } from "../lib/settings";
+import { getUserProfile, getUserSettings } from "../lib/settings";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,10 +16,12 @@ export default function Layout({ children }: LayoutProps) {
   const { user } = useAuth();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [defaultCurrency, setDefaultCurrency] = useState("USD");
 
   useEffect(() => {
     if (!user) {
       setProfilePhoto(null);
+      setDefaultCurrency("USD");
       return;
     }
 
@@ -27,13 +29,18 @@ export default function Layout({ children }: LayoutProps) {
 
     const loadProfile = async () => {
       try {
-        const profile = await getUserProfile(user.id, user.email ?? null);
+        const [profile, settings] = await Promise.all([
+          getUserProfile(user.id, user.email ?? null),
+          getUserSettings(user.id),
+        ]);
         if (isMounted) {
           setProfilePhoto(profile.avatarUrl);
+          setDefaultCurrency(settings.currency);
         }
       } catch {
         if (isMounted) {
           setProfilePhoto(null);
+          setDefaultCurrency("USD");
         }
       }
     };
@@ -120,6 +127,7 @@ export default function Layout({ children }: LayoutProps) {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddTransaction={handleAddTransaction}
+        defaultCurrency={defaultCurrency}
       />
     </div>
   );

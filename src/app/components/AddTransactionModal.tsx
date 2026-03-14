@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, DollarSign, Calendar, Tag, FileText, Repeat, Globe } from "lucide-react";
+import { convertCurrency, EXCHANGE_RATES } from "../lib/currency";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -30,19 +31,15 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
   const [recurringFrequency, setRecurringFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setSelectedCurrency(defaultCurrency);
+  }, [defaultCurrency]);
+
   const expenseCategories = ['Food', 'Books', 'Transport', 'Entertainment', 'Shopping', 'Other'];
   const incomeCategories = ['Job', 'Scholarship', 'Allowance', 'Gift', 'Other'];
 
   // Default exchange rates if none provided
-  const rates = exchangeRates || {
-    'USD': 1,
-    'EUR': 0.92,
-    'GBP': 0.79,
-    'CAD': 1.35,
-    'AUD': 1.52,
-    'JPY': 149.50,
-    'CNY': 7.24,
-  };
+  const rates = exchangeRates || EXCHANGE_RATES;
 
   const currencySymbols: { [key: string]: string } = {
     'USD': '$',
@@ -56,12 +53,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
 
   // Convert amount from selected currency to default currency
   const convertToDefaultCurrency = (value: number, fromCurrency: string): number => {
-    if (fromCurrency === defaultCurrency) return value;
-    
-    // Convert to USD first (base currency)
-    const inUSD = value / rates[fromCurrency];
-    // Then convert to default currency
-    return inUSD * rates[defaultCurrency];
+    return convertCurrency(value, fromCurrency, defaultCurrency);
   };
 
   // Calculate converted amount for display
@@ -82,14 +74,17 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
     setIsSubmitting(true);
 
     try {
+      const parsedAmount = parseFloat(amount);
+      const convertedAmount = convertToDefaultCurrency(parsedAmount, selectedCurrency);
+
       await onAddTransaction({
         name,
-        amount: parseFloat(amount),
+        amount: convertedAmount,
         category,
         type,
         occurredOn: date,
         currency: selectedCurrency,
-        originalAmount: amount ? parseFloat(amount) : undefined,
+        originalAmount: parsedAmount,
         isRecurring,
         recurringFrequency
       });

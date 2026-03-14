@@ -22,8 +22,11 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import DateFilter from "../components/DateFilter";
+import { useUserCurrency } from "../hooks/useUserCurrency";
+import { formatCurrency, formatCurrencyWithCode } from "../lib/currency";
 import {
   formatTransactionDate,
+  getTransactionAmountInCurrency,
   listTransactions,
   parseTransactionDate,
   removeTransaction,
@@ -34,6 +37,7 @@ import type { Transaction } from "../types/transactions";
 
 export default function Transactions() {
   const { user } = useAuth();
+  const currency = useUserCurrency();
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,11 +128,13 @@ export default function Transactions() {
           return false;
         }
 
-        if (minAmount && transaction.amount < parseFloat(minAmount)) {
+        const convertedAmount = getTransactionAmountInCurrency(transaction, currency);
+
+        if (minAmount && convertedAmount < parseFloat(minAmount)) {
           return false;
         }
 
-        if (maxAmount && transaction.amount > parseFloat(maxAmount)) {
+        if (maxAmount && convertedAmount > parseFloat(maxAmount)) {
           return false;
         }
 
@@ -163,16 +169,17 @@ export default function Transactions() {
       selectedDate,
       selectedDateRange,
       selectedType,
+      currency,
     ],
   );
 
   const totalIncome = filteredTransactions
     .filter((transaction) => transaction.type === "income")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
 
   const totalExpenses = filteredTransactions
     .filter((transaction) => transaction.type === "expense")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
 
   const clearFilters = () => {
     setSelectedType("all");
@@ -195,10 +202,13 @@ export default function Transactions() {
 
   const handleExportCSV = () => {
     const csvData = [
-      ["Name", "Amount", "Category", "Type", "Date"],
+      ["Name", "Amount", "Display Currency", "Original Amount", "Original Currency", "Category", "Type", "Date"],
       ...filteredTransactions.map((transaction) => [
         transaction.name,
-        transaction.amount.toString(),
+        getTransactionAmountInCurrency(transaction, currency).toString(),
+        currency,
+        transaction.originalAmount.toString(),
+        transaction.currency,
         transaction.category,
         transaction.type,
         transaction.occurredOn,
@@ -233,7 +243,7 @@ export default function Transactions() {
   const startEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
     setEditName(transaction.name);
-    setEditAmount(transaction.amount.toString());
+    setEditAmount(transaction.originalAmount.toString());
     setEditCategory(transaction.category);
   };
 
@@ -251,7 +261,17 @@ export default function Transactions() {
 
     const updated = await updateTransaction(user.id, id, {
       name: editName,
-      amount: parseFloat(editAmount) || undefined,
+      amount:
+        editAmount !== ""
+          ? getTransactionAmountInCurrency(
+              {
+                ...allTransactions.find((transaction) => transaction.id === id)!,
+                originalAmount: parseFloat(editAmount),
+              },
+              currency,
+            )
+          : undefined,
+      originalAmount: parseFloat(editAmount) || undefined,
       category: editCategory,
     });
 
@@ -334,14 +354,14 @@ export default function Transactions() {
               <TrendingUp className="size-3" />
               Income
             </div>
-            <div className="text-2xl text-primary">${totalIncome.toFixed(2)}</div>
+            <div className="text-2xl text-primary">{formatCurrency(totalIncome, currency)}</div>
           </div>
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
               <TrendingDown className="size-3" />
               Expenses
             </div>
-            <div className="text-2xl text-destructive">${totalExpenses.toFixed(2)}</div>
+            <div className="text-2xl text-destructive">{formatCurrency(totalExpenses, currency)}</div>
           </div>
         </div>
 
@@ -625,11 +645,15 @@ export default function Transactions() {
                         <div className="text-xs text-muted-foreground mt-1">
                           {formatTransactionDate(transaction.occurredOn)}
                         </div>
+                        <div className="text-xs text-muted-foreground">
+                          Paid in {formatCurrencyWithCode(transaction.originalAmount, transaction.currency)}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className={transaction.type === "income" ? "text-lg text-primary" : "text-lg text-foreground"}>
-                        {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                        {transaction.type === "income" ? "+" : "-"}
+                        {formatCurrency(getTransactionAmountInCurrency(transaction, currency), currency)}
                       </div>
                       <div className="flex items-center gap-1">
                         <button

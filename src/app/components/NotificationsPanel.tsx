@@ -7,9 +7,10 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { differenceInCalendarDays, endOfMonth, formatDistanceToNow, isWithinInterval, startOfMonth, subMonths } from "date-fns";
+import { formatCurrency } from "../lib/currency";
 import { useAuth } from "../providers/AuthProvider";
 import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
-import { listTransactions, parseTransactionDate } from "../lib/transactions";
+import { getTransactionAmountInCurrency, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { getUserSettings } from "../lib/settings";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
 import type { UserSettings } from "../types/settings";
@@ -146,7 +147,7 @@ export default function NotificationsPanel() {
       budgetCategories.forEach((category) => {
         const spent = currentMonthExpenses
           .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
-          .reduce((sum, transaction) => sum + transaction.amount, 0);
+          .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, settings.currency), 0);
 
         if (category.budget > 0 && spent / category.budget >= 0.8) {
           items.push({
@@ -155,7 +156,7 @@ export default function NotificationsPanel() {
             title: spent > category.budget ? "Over Budget" : "Budget Alert",
             message:
               spent > category.budget
-                ? `${category.name} is over budget by $${(spent - category.budget).toFixed(2)}.`
+                ? `${category.name} is over budget by ${formatCurrency(spent - category.budget, settings.currency)}.`
                 : `${category.name} has used ${((spent / category.budget) * 100).toFixed(0)}% of its monthly budget.`,
             time: "this month",
             read: false,
@@ -189,10 +190,10 @@ export default function NotificationsPanel() {
       );
       const thisMonthIncome = thisMonth
         .filter((transaction) => transaction.type === "income")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, settings.currency), 0);
       const thisMonthExpenses = thisMonth
         .filter((transaction) => transaction.type === "expense")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, settings.currency), 0);
 
       const previousMonthInterval = {
         start: startOfMonth(subMonths(now, 1)),
@@ -204,7 +205,7 @@ export default function NotificationsPanel() {
             transaction.type === "expense" &&
             isWithinInterval(parseTransactionDate(transaction.occurredOn), previousMonthInterval),
         )
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, settings.currency), 0);
 
       const delta = previousMonthExpenses > 0
         ? ((thisMonthExpenses - previousMonthExpenses) / previousMonthExpenses) * 100
@@ -216,8 +217,8 @@ export default function NotificationsPanel() {
         title: "Spending Summary",
         message:
           thisMonthIncome > 0
-            ? `Income $${thisMonthIncome.toFixed(2)}, expenses $${thisMonthExpenses.toFixed(2)}. ${delta <= 0 ? `You're spending ${Math.abs(delta).toFixed(1)}% less than last month.` : `You're spending ${delta.toFixed(1)}% more than last month.`}`
-            : `Expenses total $${thisMonthExpenses.toFixed(2)} this month.`,
+            ? `Income ${formatCurrency(thisMonthIncome, settings.currency)}, expenses ${formatCurrency(thisMonthExpenses, settings.currency)}. ${delta <= 0 ? `You're spending ${Math.abs(delta).toFixed(1)}% less than last month.` : `You're spending ${delta.toFixed(1)}% more than last month.`}`
+            : `Expenses total ${formatCurrency(thisMonthExpenses, settings.currency)} this month.`,
         time: "updated recently",
         read: false,
       });
@@ -229,7 +230,7 @@ export default function NotificationsPanel() {
         id: `income-${latestIncome.id}`,
         type: "success",
         title: "Income Recorded",
-        message: `${latestIncome.name} added $${latestIncome.amount.toFixed(2)} to your account.`,
+        message: `${latestIncome.name} added ${formatCurrency(getTransactionAmountInCurrency(latestIncome, settings.currency), settings.currency)} to your account.`,
         time: formatDistanceToNow(parseTransactionDate(latestIncome.occurredOn), { addSuffix: true }),
         read: false,
       });

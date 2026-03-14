@@ -40,8 +40,10 @@ import {
   subMonths,
 } from "date-fns";
 import Layout from "../components/Layout";
+import { useUserCurrency } from "../hooks/useUserCurrency";
+import { formatCurrency } from "../lib/currency";
 import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
-import { listTransactions, parseTransactionDate } from "../lib/transactions";
+import { getTransactionAmountInCurrency, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -50,6 +52,7 @@ const CHART_COLORS = ["#2d6a4f", "#52b788", "#74c69d", "#95d5b2", "#b7e4c7", "#4
 
 export default function Analytics() {
   const { user } = useAuth();
+  const currency = useUserCurrency();
   const [timePeriod, setTimePeriod] = useState<"week" | "month" | "year">("month");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
@@ -142,14 +145,21 @@ export default function Analytics() {
   const expenseTransactions = periodTransactions.filter((transaction) => transaction.type === "expense");
   const incomeTransactions = periodTransactions.filter((transaction) => transaction.type === "income");
 
-  const totalIncome = incomeTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
-  const totalExpenses = expenseTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const totalIncome = incomeTransactions.reduce(
+    (sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency),
+    0,
+  );
+  const totalExpenses = expenseTransactions.reduce(
+    (sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency),
+    0,
+  );
   const totalSaved = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? ((totalSaved / totalIncome) * 100).toFixed(1) : "0.0";
 
   const categoryData = useMemo(() => {
     const totals = expenseTransactions.reduce<Record<string, number>>((acc, transaction) => {
-      acc[transaction.category] = (acc[transaction.category] ?? 0) + transaction.amount;
+      acc[transaction.category] =
+        (acc[transaction.category] ?? 0) + getTransactionAmountInCurrency(transaction, currency);
       return acc;
     }, {});
 
@@ -163,7 +173,7 @@ export default function Analytics() {
         percentage: total > 0 ? Number(((value / total) * 100).toFixed(1)) : 0,
       }))
       .sort((a, b) => b.value - a.value);
-  }, [expenseTransactions]);
+  }, [currency, expenseTransactions]);
 
   const topCategory = categoryData[0];
 
@@ -174,15 +184,14 @@ export default function Analytics() {
     }).map((month) => {
       const monthKey = format(month, "yyyy-MM");
       const inMonth = transactions.filter(
-        (transaction) => format(new Date(transaction.occurredOn), "yyyy-MM") === monthKey,
         (transaction) => format(parseTransactionDate(transaction.occurredOn), "yyyy-MM") === monthKey,
       );
       const income = inMonth
         .filter((transaction) => transaction.type === "income")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
       const expenses = inMonth
         .filter((transaction) => transaction.type === "expense")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
 
       return {
         month: format(month, "MMM"),
@@ -191,7 +200,7 @@ export default function Analytics() {
         savings: income - expenses,
       };
     });
-  }, [now, transactions]);
+  }, [currency, now, transactions]);
 
   const previousMonthData = monthlyComparison[monthlyComparison.length - 2];
   const currentMonthData = monthlyComparison[monthlyComparison.length - 1];
@@ -211,14 +220,14 @@ export default function Analytics() {
             transaction.type === "expense" &&
             format(parseTransactionDate(transaction.occurredOn), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
         )
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
 
       return {
         day: format(day, "MMM d"),
         amount,
       };
     });
-  }, [now, transactions]);
+  }, [currency, now, transactions]);
 
   const avgDailySpending = (
     dailySpending.reduce((sum, item) => sum + item.amount, 0) / (dailySpending.length || 1)
@@ -228,7 +237,7 @@ export default function Analytics() {
     return budgetCategories.map((category) => {
       const actual = expenseTransactions
         .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
 
       return {
         category: category.name,
@@ -260,12 +269,12 @@ export default function Analytics() {
               transaction.category.toLowerCase() === category.name.toLowerCase() &&
               format(parseTransactionDate(transaction.occurredOn), "yyyy-MM") === monthKey,
           )
-          .reduce((sum, transaction) => sum + transaction.amount, 0);
+          .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0);
       });
 
       return row;
     });
-  }, [budgetCategories, now, transactions]);
+  }, [budgetCategories, currency, now, transactions]);
 
   const recommendations = useMemo(() => {
     const items: Array<{ title: string; message: string }> = [];
@@ -273,7 +282,7 @@ export default function Analytics() {
     if (overBudgetCategory) {
       items.push({
         title: `Reduce ${overBudgetCategory.category} Expenses`,
-        message: `You're currently $${(overBudgetCategory.actual - overBudgetCategory.budget).toFixed(2)} over budget in ${overBudgetCategory.category}.`,
+        message: `You're currently ${formatCurrency(overBudgetCategory.actual - overBudgetCategory.budget, currency)} over budget in ${overBudgetCategory.category}.`,
       });
     }
 
@@ -294,7 +303,7 @@ export default function Analytics() {
       items.push({
         title: "Track Your Savings Goal",
         message: remaining > 0
-          ? `${pinnedGoal.name} still needs $${remaining.toFixed(2)}. Redirecting part of this month's surplus could speed it up.`
+          ? `${pinnedGoal.name} still needs ${formatCurrency(remaining, currency)}. Redirecting part of this month's surplus could speed it up.`
           : `${pinnedGoal.name} is fully funded. Consider pinning the next goal.`,
       });
     }
@@ -303,7 +312,7 @@ export default function Analytics() {
       const monthlySubscriptionTotal = subscriptions.reduce((sum, subscription) => sum + subscription.monthlyCost, 0);
       items.push({
         title: "Audit Recurring Costs",
-        message: `Subscriptions now total $${monthlySubscriptionTotal.toFixed(2)} per month. Review unused services before the next renewal cycle.`,
+        message: `Subscriptions now total ${formatCurrency(monthlySubscriptionTotal, currency)} per month. Review unused services before the next renewal cycle.`,
       });
     }
 
@@ -370,19 +379,19 @@ export default function Analytics() {
               </div>
               <div className="bg-card border border-border rounded-xl p-4">
                 <div className="text-sm text-muted-foreground mb-1">Avg Daily</div>
-                <div className="text-2xl">${avgDailySpending}</div>
+                <div className="text-2xl">{formatCurrency(Number(avgDailySpending), currency)}</div>
                 <div className="text-xs text-muted-foreground mt-1">spending</div>
               </div>
               <div className="bg-card border border-border rounded-xl p-4">
                 <div className="text-sm text-muted-foreground mb-1">Total Saved</div>
-                <div className="text-2xl text-primary">${totalSaved.toFixed(2)}</div>
+                <div className="text-2xl text-primary">{formatCurrency(totalSaved, currency)}</div>
                 <div className="text-xs text-muted-foreground mt-1">this period</div>
               </div>
               <div className="bg-card border border-border rounded-xl p-4">
                 <div className="text-sm text-muted-foreground mb-1">Top Category</div>
                 <div className="text-lg">{topCategory?.name ?? "None"}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {topCategory ? `$${topCategory.value.toFixed(2)}` : "No expense data"}
+                  {topCategory ? formatCurrency(topCategory.value, currency) : "No expense data"}
                 </div>
               </div>
             </div>
@@ -409,7 +418,7 @@ export default function Analytics() {
                     <h4 className="mb-2 text-orange-900">Watch Out</h4>
                     <p className="text-sm text-orange-800">
                       {overBudgetCategory
-                        ? `${overBudgetCategory.category} is $${(overBudgetCategory.actual - overBudgetCategory.budget).toFixed(2)} over budget.`
+                        ? `${overBudgetCategory.category} is ${formatCurrency(overBudgetCategory.actual - overBudgetCategory.budget, currency)} over budget.`
                         : "No categories are over budget right now."}
                     </p>
                   </div>
@@ -459,7 +468,7 @@ export default function Analytics() {
                         <Cell key={`analytics-spending-cell-${entry.name}-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `$${value}`} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), currency)} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-3">
@@ -470,7 +479,7 @@ export default function Analytics() {
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                           <span>{category.name}</span>
                         </div>
-                        <span className="font-medium">${category.value.toFixed(2)}</span>
+                        <span className="font-medium">{formatCurrency(category.value, currency)}</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
                         <div
@@ -544,7 +553,7 @@ export default function Analytics() {
                       border: "1px solid #95d5b2",
                       borderRadius: "8px",
                     }}
-                    formatter={(value) => `$${value}`}
+                    formatter={(value) => formatCurrency(Number(value), currency)}
                   />
                   <Line type="monotone" dataKey="amount" stroke="#2d6a4f" strokeWidth={2} dot={{ fill: "#2d6a4f", r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
