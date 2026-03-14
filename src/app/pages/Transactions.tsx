@@ -25,6 +25,7 @@ import DateFilter from "../components/DateFilter";
 import {
   formatTransactionDate,
   listTransactions,
+  parseTransactionDate,
   removeTransaction,
   updateTransaction,
 } from "../lib/transactions";
@@ -132,7 +133,7 @@ export default function Transactions() {
         }
 
         if (selectedDateRange !== "all") {
-          const transactionDate = new Date(transaction.occurredOn);
+          const transactionDate = parseTransactionDate(transaction.occurredOn);
           const today = new Date();
           const daysDiff = Math.floor(
             (today.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -144,7 +145,7 @@ export default function Transactions() {
         }
 
         if (selectedDate) {
-          const transactionDate = new Date(transaction.occurredOn);
+          const transactionDate = parseTransactionDate(transaction.occurredOn);
           const selectedDateObj = new Date(selectedDate);
           if (transactionDate.toDateString() !== selectedDateObj.toDateString()) {
             return false;

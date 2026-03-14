@@ -34,6 +34,7 @@ import {
   updateSavingsGoal,
 } from "../lib/finance";
 import { listTransactions } from "../lib/transactions";
+import { parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { BudgetCategory, SavingsGoal } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -148,7 +149,7 @@ export default function BudgetGoals() {
     const monthlyExpenses = transactions.filter(
       (transaction) =>
         transaction.type === "expense" &&
-        isWithinInterval(new Date(transaction.occurredOn), { start, end }),
+        isWithinInterval(parseTransactionDate(transaction.occurredOn), { start, end }),
     );
 
     return categories.map((category) => ({

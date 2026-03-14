@@ -9,7 +9,7 @@ import {
 import { differenceInCalendarDays, endOfMonth, formatDistanceToNow, isWithinInterval, startOfMonth, subMonths } from "date-fns";
 import { useAuth } from "../providers/AuthProvider";
 import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
-import { listTransactions } from "../lib/transactions";
+import { listTransactions, parseTransactionDate } from "../lib/transactions";
 import { getUserSettings } from "../lib/settings";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
 import type { UserSettings } from "../types/settings";
@@ -118,7 +118,7 @@ export default function NotificationsPanel() {
     const currentMonthExpenses = transactions.filter(
       (transaction) =>
         transaction.type === "expense" &&
-        isWithinInterval(new Date(transaction.occurredOn), {
+        isWithinInterval(parseTransactionDate(transaction.occurredOn), {
           start: startOfMonth(now),
           end: endOfMonth(now),
         }),
@@ -182,7 +182,7 @@ export default function NotificationsPanel() {
 
     if (settings.weeklySummary) {
       const thisMonth = transactions.filter((transaction) =>
-        isWithinInterval(new Date(transaction.occurredOn), {
+        isWithinInterval(parseTransactionDate(transaction.occurredOn), {
           start: startOfMonth(now),
           end: endOfMonth(now),
         }),
@@ -202,7 +202,7 @@ export default function NotificationsPanel() {
         .filter(
           (transaction) =>
             transaction.type === "expense" &&
-            isWithinInterval(new Date(transaction.occurredOn), previousMonthInterval),
+            isWithinInterval(parseTransactionDate(transaction.occurredOn), previousMonthInterval),
         )
         .reduce((sum, transaction) => sum + transaction.amount, 0);
 
@@ -230,7 +230,7 @@ export default function NotificationsPanel() {
         type: "success",
         title: "Income Recorded",
         message: `${latestIncome.name} added $${latestIncome.amount.toFixed(2)} to your account.`,
-        time: formatDistanceToNow(new Date(latestIncome.occurredOn), { addSuffix: true }),
+        time: formatDistanceToNow(parseTransactionDate(latestIncome.occurredOn), { addSuffix: true }),
         read: false,
       });
     }

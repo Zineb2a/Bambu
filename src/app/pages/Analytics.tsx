@@ -41,7 +41,7 @@ import {
 } from "date-fns";
 import Layout from "../components/Layout";
 import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
-import { listTransactions } from "../lib/transactions";
+import { listTransactions, parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -134,7 +134,7 @@ export default function Analytics() {
   const periodTransactions = useMemo(
     () =>
       transactions.filter((transaction) =>
-        isWithinInterval(new Date(transaction.occurredOn), selectedInterval),
+        isWithinInterval(parseTransactionDate(transaction.occurredOn), selectedInterval),
       ),
     [selectedInterval, transactions],
   );
@@ -175,6 +175,7 @@ export default function Analytics() {
       const monthKey = format(month, "yyyy-MM");
       const inMonth = transactions.filter(
         (transaction) => format(new Date(transaction.occurredOn), "yyyy-MM") === monthKey,
+        (transaction) => format(parseTransactionDate(transaction.occurredOn), "yyyy-MM") === monthKey,
       );
       const income = inMonth
         .filter((transaction) => transaction.type === "income")
@@ -208,7 +209,7 @@ export default function Analytics() {
         .filter(
           (transaction) =>
             transaction.type === "expense" &&
-            format(new Date(transaction.occurredOn), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
+            format(parseTransactionDate(transaction.occurredOn), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
         )
         .reduce((sum, transaction) => sum + transaction.amount, 0);
 
@@ -257,7 +258,7 @@ export default function Analytics() {
             (transaction) =>
               transaction.type === "expense" &&
               transaction.category.toLowerCase() === category.name.toLowerCase() &&
-              format(new Date(transaction.occurredOn), "yyyy-MM") === monthKey,
+              format(parseTransactionDate(transaction.occurredOn), "yyyy-MM") === monthKey,
           )
           .reduce((sum, transaction) => sum + transaction.amount, 0);
       });

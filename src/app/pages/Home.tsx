@@ -38,7 +38,7 @@ import {
 } from "date-fns";
 import Layout from "../components/Layout";
 import { listSavingsGoals } from "../lib/finance";
-import { formatTransactionDate, listTransactions } from "../lib/transactions";
+import { formatTransactionDate, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { SavingsGoal } from "../types/finance";
 import type { Transaction } from "../types/transactions";
@@ -111,7 +111,7 @@ export default function Home() {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
     return transactions.filter((transaction) =>
-      isWithinInterval(new Date(transaction.occurredOn), { start, end }),
+      isWithinInterval(parseTransactionDate(transaction.occurredOn), { start, end }),
     );
   }, [transactions]);
 
@@ -153,7 +153,7 @@ export default function Home() {
     const expenseTransactions = transactions.filter(
       (transaction) =>
         transaction.type === "expense" &&
-        isWithinInterval(new Date(transaction.occurredOn), interval),
+        isWithinInterval(parseTransactionDate(transaction.occurredOn), interval),
     );
 
     const byCategory = expenseTransactions.reduce<Record<string, number>>((acc, transaction) => {
@@ -178,7 +178,7 @@ export default function Home() {
         day.setDate(start.getDate() + index);
         const sameDay = transactions.filter(
           (transaction) =>
-            format(new Date(transaction.occurredOn), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
+            format(parseTransactionDate(transaction.occurredOn), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
         );
 
         return {
@@ -200,7 +200,7 @@ export default function Home() {
       }).map((month) => {
         const inMonth = transactions.filter(
           (transaction) =>
-            format(new Date(transaction.occurredOn), "yyyy-MM") === format(month, "yyyy-MM"),
+            format(parseTransactionDate(transaction.occurredOn), "yyyy-MM") === format(month, "yyyy-MM"),
         );
 
         return {
@@ -219,7 +219,7 @@ export default function Home() {
       currentMonthTransactions.reduce<
         Record<string, { period: string; income: number; expenses: number }>
       >((acc, transaction) => {
-        const period = format(new Date(transaction.occurredOn), "MMM d");
+        const period = format(parseTransactionDate(transaction.occurredOn), "MMM d");
         if (!acc[period]) {
           acc[period] = { period, income: 0, expenses: 0 };
         }
@@ -258,10 +258,6 @@ export default function Home() {
         return <ShoppingCart className="size-4" />;
     }
   };
-
-  const pieData = expensesByCategory.length
-    ? expensesByCategory
-    : [{ name: "No expenses", value: 1, color: "#d9f0b3" }];
 
   return (
     <Layout>
@@ -347,28 +343,35 @@ export default function Home() {
                   <Target className="size-5 text-primary" />
                   Spending by Category
                 </h3>
-                <div suppressHydrationWarning>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart key={`spending-pie-${timePeriod}`}>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: $${value}`}
-                        outerRadius={80}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`home-spending-cell-${entry.name}-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                {expensesByCategory.length === 0 ? (
+                  <div className="h-[250px] flex flex-col items-center justify-center rounded-lg bg-muted/40 text-center">
+                    <div className="text-4xl text-primary mb-2">$0</div>
+                    <p className="text-sm text-muted-foreground">No expense data for this period.</p>
+                  </div>
+                ) : (
+                  <div suppressHydrationWarning>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart key={`spending-pie-${timePeriod}`}>
+                        <Pie
+                          data={expensesByCategory}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => `${name}: $${value}`}
+                          outerRadius={80}
+                          dataKey="value"
+                        >
+                          {expensesByCategory.map((entry, index) => (
+                            <Cell key={`home-spending-cell-${entry.name}-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {expensesByCategory.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No expense data for this period.</div>
+                    <div className="text-sm text-muted-foreground">$0 total</div>
                   ) : (
                     expensesByCategory.map((category, index) => (
                       <div key={`legend-${category.name}-${index}`} className="flex items-center gap-2">

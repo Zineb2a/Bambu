@@ -47,6 +47,10 @@ export function formatTransactionDate(date: string) {
   return format(parseISO(date), "MMM d, yyyy");
 }
 
+export function parseTransactionDate(date: string) {
+  return parseISO(date);
+}
+
 export async function listTransactions(userId: string) {
   const { data, error } = await supabase
     .from("transactions")
