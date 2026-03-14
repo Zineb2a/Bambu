@@ -28,6 +28,8 @@ import { formatCurrency } from "../lib/currency";
 import {
   createBudgetCategory,
   createSavingsGoal,
+  getBudgetAmountInCurrency,
+  getSavingsGoalAmountsInCurrency,
   listBudgetCategories,
   listSavingsGoals,
   removeBudgetCategory,
@@ -70,6 +72,7 @@ const emojiOptions = ["💻", "📱", "🎮", "🚗", "✈️", "🏠", "🎓", 
 
 interface BudgetCategoryWithSpent extends BudgetCategory {
   spent: number;
+  displayBudget: number;
 }
 
 export default function BudgetGoals() {
@@ -154,18 +157,28 @@ export default function BudgetGoals() {
         isWithinInterval(parseTransactionDate(transaction.occurredOn), { start, end }),
     );
 
-    return categories.map((category) => ({
-      ...category,
-      spent: monthlyExpenses
-        .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
-        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
-    }));
+    return categories.map((category) => {
+      const displayBudget = getBudgetAmountInCurrency(category, currency);
+      return {
+        ...category,
+        displayBudget,
+        spent: monthlyExpenses
+          .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
+          .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
+      };
+    });
   }, [categories, currency, transactions]);
 
-  const totalBudget = categoriesWithSpent.reduce((sum, category) => sum + category.budget, 0);
+  const totalBudget = categoriesWithSpent.reduce((sum, category) => sum + category.displayBudget, 0);
   const totalSpent = categoriesWithSpent.reduce((sum, category) => sum + category.spent, 0);
-  const totalGoalsTarget = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
-  const totalGoalsSaved = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
+  const totalGoalsTarget = goals.reduce(
+    (sum, goal) => sum + getSavingsGoalAmountsInCurrency(goal, currency).targetAmount,
+    0,
+  );
+  const totalGoalsSaved = goals.reduce(
+    (sum, goal) => sum + getSavingsGoalAmountsInCurrency(goal, currency).currentAmount,
+    0,
+  );
 
   const getIcon = (iconName: string) => {
     const option = iconOptions.find((opt) => opt.value === iconName);
@@ -201,6 +214,9 @@ export default function BudgetGoals() {
         name: goalName,
         targetAmount: parseFloat(goalAmount),
         currentAmount: parseFloat(goalCurrent) || 0,
+        currency,
+        originalTargetAmount: parseFloat(goalAmount),
+        originalCurrentAmount: parseFloat(goalCurrent) || 0,
         emoji: goalEmoji,
       });
       setGoals(goals.map((goal) => (goal.id === editingGoal ? updated : goal)));
@@ -209,6 +225,9 @@ export default function BudgetGoals() {
         name: goalName,
         targetAmount: parseFloat(goalAmount),
         currentAmount: parseFloat(goalCurrent) || 0,
+        currency,
+        originalTargetAmount: parseFloat(goalAmount),
+        originalCurrentAmount: parseFloat(goalCurrent) || 0,
         emoji: goalEmoji,
       });
       setGoals([...goals, created]);
@@ -262,6 +281,8 @@ export default function BudgetGoals() {
 
     const updated = await updateBudgetCategory(user.id, categoryId, {
       budget: parseFloat(editBudget),
+      currency,
+      originalBudget: parseFloat(editBudget),
     });
 
     setCategories(categories.map((category) => (category.id === categoryId ? updated : category)));
@@ -289,6 +310,8 @@ export default function BudgetGoals() {
     const created = await createBudgetCategory(user.id, {
       name: newCategoryName,
       budget: parseFloat(newCategoryBudget),
+      currency,
+      originalBudget: parseFloat(newCategoryBudget),
       icon: newCategoryIcon,
       color: newCategoryColor,
     });
@@ -363,7 +386,10 @@ export default function BudgetGoals() {
                 </div>
               ) : (
                 goals.map((goal) => {
-                  const progress = goal.targetAmount ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+                  const displayGoal = getSavingsGoalAmountsInCurrency(goal, currency);
+                  const progress = displayGoal.targetAmount
+                    ? (displayGoal.currentAmount / displayGoal.targetAmount) * 100
+                    : 0;
 
                   return (
                     <div key={goal.id} className="bg-secondary rounded-lg p-4">
@@ -442,7 +468,7 @@ export default function BudgetGoals() {
                               <div>
                                 <div className="font-medium">{goal.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {formatCurrency(goal.currentAmount, currency)} / {formatCurrency(goal.targetAmount, currency)}
+                                  {formatCurrency(displayGoal.currentAmount, currency)} / {formatCurrency(displayGoal.targetAmount, currency)}
                                 </div>
                               </div>
                             </div>
@@ -451,8 +477,8 @@ export default function BudgetGoals() {
                                 onClick={() => {
                                   setEditingGoal(goal.id);
                                   setGoalName(goal.name);
-                                  setGoalAmount(String(goal.targetAmount));
-                                  setGoalCurrent(String(goal.currentAmount));
+                                  setGoalAmount(String(goal.originalTargetAmount));
+                                  setGoalCurrent(String(goal.originalCurrentAmount));
                                   setGoalEmoji(goal.emoji);
                                 }}
                                 className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -486,7 +512,7 @@ export default function BudgetGoals() {
                           <div className="mt-2 flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">{progress.toFixed(0)}% complete</span>
                             <span className="text-muted-foreground">
-                              {formatCurrency(goal.targetAmount - goal.currentAmount, currency)} to go
+                              {formatCurrency(displayGoal.targetAmount - displayGoal.currentAmount, currency)} to go
                             </span>
                           </div>
                         </>
@@ -521,8 +547,8 @@ export default function BudgetGoals() {
                 </div>
               ) : (
                 categoriesWithSpent.map((category) => {
-                  const percentage = category.budget ? (category.spent / category.budget) * 100 : 0;
-                  const isOverBudget = category.spent > category.budget;
+                  const percentage = category.displayBudget ? (category.spent / category.displayBudget) * 100 : 0;
+                  const isOverBudget = category.spent > category.displayBudget;
                   const IconComponent = getIcon(category.icon);
 
                   return (
@@ -585,7 +611,7 @@ export default function BudgetGoals() {
                               <div>
                                 <div className="font-medium">{category.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {formatCurrency(category.spent, currency)} / {formatCurrency(category.budget, currency)}
+                                  {formatCurrency(category.spent, currency)} / {formatCurrency(category.displayBudget, currency)}
                                 </div>
                               </div>
                             </div>
@@ -593,7 +619,7 @@ export default function BudgetGoals() {
                               <button
                                 onClick={() => {
                                   setEditingCategory(category.id);
-                                  setEditBudget(String(category.budget));
+                                  setEditBudget(String(category.originalBudget));
                                 }}
                                 className="p-2 hover:bg-muted rounded-lg transition-colors"
                               >
@@ -619,9 +645,9 @@ export default function BudgetGoals() {
                           <div className="text-sm text-muted-foreground mt-2 flex items-center justify-between">
                             <span>{percentage.toFixed(1)}% used</span>
                             {isOverBudget ? (
-                              <span className="text-destructive">⚠️ {formatCurrency(category.spent - category.budget, currency)} over</span>
+                              <span className="text-destructive">⚠️ {formatCurrency(category.spent - category.displayBudget, currency)} over</span>
                             ) : (
-                              <span className="text-primary">{formatCurrency(category.budget - category.spent, currency)} left</span>
+                              <span className="text-primary">{formatCurrency(category.displayBudget - category.spent, currency)} left</span>
                             )}
                           </div>
                         </>

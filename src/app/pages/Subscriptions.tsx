@@ -3,8 +3,10 @@ import { Plus, Edit2, X, Calendar, DollarSign, AlertCircle } from "lucide-react"
 import Layout from "../components/Layout";
 import { useUserCurrency } from "../hooks/useUserCurrency";
 import { formatCurrency } from "../lib/currency";
+import { BRAND_LOGO_SRC } from "../lib/branding";
 import {
   createSubscription,
+  getSubscriptionAmountInCurrency,
   listSubscriptions,
   removeSubscription,
   updateSubscription,
@@ -34,6 +36,8 @@ const emptySubscription: Omit<Subscription, "userId" | "createdAt"> = {
   name: "",
   category: "",
   monthlyCost: 0,
+  currency: "USD",
+  originalMonthlyCost: 0,
   renewalDate: "",
   hasStudentDiscount: false,
 };
@@ -86,7 +90,10 @@ export default function Subscriptions() {
     };
   }, [user]);
 
-  const totalMonthlyCost = subscriptions.reduce((total, subscription) => total + subscription.monthlyCost, 0);
+  const totalMonthlyCost = subscriptions.reduce(
+    (total, subscription) => total + getSubscriptionAmountInCurrency(subscription, currency),
+    0,
+  );
 
   const handleAddSubscription = async () => {
     if (!user || !newSubscription.name || !newSubscription.category || !newSubscription.renewalDate) {
@@ -98,6 +105,8 @@ export default function Subscriptions() {
       name: newSubscription.name,
       category: newSubscription.category,
       monthlyCost: newSubscription.monthlyCost,
+      currency,
+      originalMonthlyCost: newSubscription.monthlyCost,
       renewalDate: newSubscription.renewalDate,
       hasStudentDiscount: newSubscription.hasStudentDiscount,
     });
@@ -118,6 +127,8 @@ export default function Subscriptions() {
       name: editingSubscription.name,
       category: editingSubscription.category,
       monthlyCost: editingSubscription.monthlyCost,
+      currency,
+      originalMonthlyCost: editingSubscription.monthlyCost,
       renewalDate: editingSubscription.renewalDate,
       hasStudentDiscount: editingSubscription.hasStudentDiscount,
     });
@@ -175,7 +186,11 @@ export default function Subscriptions() {
                 {subscriptions.length} active subscription{subscriptions.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className="text-6xl">🐼💳</div>
+            <img
+              src={BRAND_LOGO_SRC}
+              alt="Bambu logo"
+              className="h-16 w-16 object-contain"
+            />
           </div>
         </div>
 
@@ -203,7 +218,12 @@ export default function Subscriptions() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
-                            setEditingSubscription(subscription);
+                            setEditingSubscription({
+                              ...subscription,
+                              monthlyCost: subscription.originalMonthlyCost,
+                              currency,
+                              originalMonthlyCost: subscription.originalMonthlyCost,
+                            });
                             setShowEditModal(true);
                           }}
                           className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -226,7 +246,7 @@ export default function Subscriptions() {
                         <DollarSign className="size-4 text-muted-foreground" />
                         <span className="text-sm">
                           <span className="font-medium">Monthly Cost</span>
-                          <span className="ml-2 text-primary font-semibold">{formatCurrency(subscription.monthlyCost, currency)}</span>
+                          <span className="ml-2 text-primary font-semibold">{formatCurrency(getSubscriptionAmountInCurrency(subscription, currency), currency)}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -323,13 +343,15 @@ export default function Subscriptions() {
                     <input
                       type="number"
                       step="0.01"
-                      value={newSubscription.monthlyCost || ""}
-                      onChange={(e) =>
-                        setNewSubscription({
-                          ...newSubscription,
-                          monthlyCost: parseFloat(e.target.value) || 0,
-                        })
-                      }
+                    value={newSubscription.monthlyCost || ""}
+                    onChange={(e) =>
+                      setNewSubscription({
+                        ...newSubscription,
+                        monthlyCost: parseFloat(e.target.value) || 0,
+                        currency,
+                        originalMonthlyCost: parseFloat(e.target.value) || 0,
+                      })
+                    }
                       placeholder="0.00"
                       className="w-full pl-8 pr-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
@@ -464,13 +486,15 @@ export default function Subscriptions() {
                     <input
                       type="number"
                       step="0.01"
-                      value={editingSubscription.monthlyCost || ""}
-                      onChange={(e) =>
-                        setEditingSubscription({
-                          ...editingSubscription,
-                          monthlyCost: parseFloat(e.target.value) || 0,
-                        })
-                      }
+                    value={editingSubscription.originalMonthlyCost || ""}
+                    onChange={(e) =>
+                      setEditingSubscription({
+                        ...editingSubscription,
+                        monthlyCost: parseFloat(e.target.value) || 0,
+                        currency,
+                        originalMonthlyCost: parseFloat(e.target.value) || 0,
+                      })
+                    }
                       placeholder="0.00"
                       className="w-full pl-8 pr-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />

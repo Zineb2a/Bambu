@@ -14,6 +14,7 @@ interface TransactionRow {
   occurred_on: string;
   type: "income" | "expense";
   is_recurring: boolean | null;
+  recurring_active: boolean | null;
   recurring_frequency: "daily" | "weekly" | "monthly" | "yearly" | null;
   created_at: string;
 }
@@ -29,6 +30,7 @@ const transactionSelect = `
   occurred_on,
   type,
   is_recurring,
+  recurring_active,
   recurring_frequency,
   created_at
 `;
@@ -45,6 +47,7 @@ function mapTransaction(row: TransactionRow): Transaction {
     occurredOn: row.occurred_on,
     type: row.type,
     isRecurring: Boolean(row.is_recurring),
+    recurringActive: row.recurring_active ?? true,
     recurringFrequency: row.recurring_frequency,
     createdAt: row.created_at,
   };
@@ -88,6 +91,7 @@ export async function createTransaction(userId: string, input: TransactionInput)
     occurred_on: input.occurredOn,
     type: input.type,
     is_recurring: input.isRecurring ?? false,
+    recurring_active: input.recurringActive ?? true,
     recurring_frequency: input.isRecurring ? input.recurringFrequency ?? "monthly" : null,
   };
 
@@ -118,6 +122,7 @@ export async function updateTransaction(
     ...(updates.occurredOn !== undefined ? { occurred_on: updates.occurredOn } : {}),
     ...(updates.type !== undefined ? { type: updates.type } : {}),
     ...(updates.isRecurring !== undefined ? { is_recurring: updates.isRecurring } : {}),
+    ...(updates.recurringActive !== undefined ? { recurring_active: updates.recurringActive } : {}),
     ...(updates.recurringFrequency !== undefined
       ? { recurring_frequency: updates.recurringFrequency }
       : {}),

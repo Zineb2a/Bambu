@@ -21,6 +21,7 @@ import {
 import Layout from "../components/Layout";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
+import { BRAND_LOGO_SRC } from "../lib/branding";
 import {
   createLinkedCard,
   getUserProfile,
@@ -929,7 +930,11 @@ export default function Settings() {
         </div>
 
         <div className="bg-secondary border border-primary/20 rounded-xl p-6 text-center">
-          <div className="text-4xl mb-2">🐼🎋</div>
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="Bambu logo"
+            className="mx-auto mb-2 h-12 w-12 object-contain"
+          />
           <h4 className="mb-2 text-primary">Bambu v1.0</h4>
           <p className="text-sm text-muted-foreground">Your friendly student budget tracker</p>
         </div>

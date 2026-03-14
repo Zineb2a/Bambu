@@ -9,6 +9,7 @@ export interface Transaction {
   occurredOn: string;
   type: "income" | "expense";
   isRecurring: boolean;
+  recurringActive: boolean;
   recurringFrequency: "daily" | "weekly" | "monthly" | "yearly" | null;
   createdAt: string;
 }
@@ -22,5 +23,6 @@ export interface TransactionInput {
   occurredOn: string;
   type: "income" | "expense";
   isRecurring?: boolean;
+  recurringActive?: boolean;
   recurringFrequency?: "daily" | "weekly" | "monthly" | "yearly";
 }

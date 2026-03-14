@@ -4,6 +4,9 @@ export interface SavingsGoal {
   name: string;
   targetAmount: number;
   currentAmount: number;
+  currency: string;
+  originalTargetAmount: number;
+  originalCurrentAmount: number;
   emoji: string;
   pinned: boolean;
   createdAt: string;
@@ -13,6 +16,9 @@ export interface SavingsGoalInput {
   name: string;
   targetAmount: number;
   currentAmount: number;
+  currency?: string;
+  originalTargetAmount?: number;
+  originalCurrentAmount?: number;
   emoji: string;
   pinned?: boolean;
 }
@@ -22,6 +28,8 @@ export interface BudgetCategory {
   userId: string;
   name: string;
   budget: number;
+  currency: string;
+  originalBudget: number;
   icon: string;
   color: string;
   createdAt: string;
@@ -30,6 +38,8 @@ export interface BudgetCategory {
 export interface BudgetCategoryInput {
   name: string;
   budget: number;
+  currency?: string;
+  originalBudget?: number;
   icon: string;
   color: string;
 }
@@ -41,6 +51,8 @@ export interface Subscription {
   name: string;
   category: string;
   monthlyCost: number;
+  currency: string;
+  originalMonthlyCost: number;
   renewalDate: string;
   hasStudentDiscount: boolean;
   createdAt: string;
@@ -51,6 +63,8 @@ export interface SubscriptionInput {
   name: string;
   category: string;
   monthlyCost: number;
+  currency?: string;
+  originalMonthlyCost?: number;
   renewalDate: string;
   hasStudentDiscount: boolean;
 }

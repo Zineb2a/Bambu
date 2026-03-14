@@ -42,7 +42,14 @@ import {
 import Layout from "../components/Layout";
 import { useUserCurrency } from "../hooks/useUserCurrency";
 import { formatCurrency } from "../lib/currency";
-import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
+import {
+  getBudgetAmountInCurrency,
+  getSavingsGoalAmountsInCurrency,
+  getSubscriptionAmountInCurrency,
+  listBudgetCategories,
+  listSavingsGoals,
+  listSubscriptions,
+} from "../lib/finance";
 import { getTransactionAmountInCurrency, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
@@ -241,11 +248,11 @@ export default function Analytics() {
 
       return {
         category: category.name,
-        budget: category.budget,
+        budget: getBudgetAmountInCurrency(category, currency),
         actual,
       };
     });
-  }, [budgetCategories, expenseTransactions]);
+  }, [budgetCategories, currency, expenseTransactions]);
 
   const overBudgetCategory = budgetComparison
     .filter((category) => category.actual > category.budget)
@@ -299,7 +306,8 @@ export default function Analytics() {
 
     const pinnedGoal = goals.find((goal) => goal.pinned) ?? goals[0];
     if (pinnedGoal) {
-      const remaining = pinnedGoal.targetAmount - pinnedGoal.currentAmount;
+      const displayGoal = getSavingsGoalAmountsInCurrency(pinnedGoal, currency);
+      const remaining = displayGoal.targetAmount - displayGoal.currentAmount;
       items.push({
         title: "Track Your Savings Goal",
         message: remaining > 0
@@ -309,7 +317,10 @@ export default function Analytics() {
     }
 
     if (subscriptions.length > 0) {
-      const monthlySubscriptionTotal = subscriptions.reduce((sum, subscription) => sum + subscription.monthlyCost, 0);
+      const monthlySubscriptionTotal = subscriptions.reduce(
+        (sum, subscription) => sum + getSubscriptionAmountInCurrency(subscription, currency),
+        0,
+      );
       items.push({
         title: "Audit Recurring Costs",
         message: `Subscriptions now total ${formatCurrency(monthlySubscriptionTotal, currency)} per month. Review unused services before the next renewal cycle.`,

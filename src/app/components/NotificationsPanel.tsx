@@ -9,7 +9,13 @@ import {
 import { differenceInCalendarDays, endOfMonth, formatDistanceToNow, isWithinInterval, startOfMonth, subMonths } from "date-fns";
 import { formatCurrency } from "../lib/currency";
 import { useAuth } from "../providers/AuthProvider";
-import { listBudgetCategories, listSavingsGoals, listSubscriptions } from "../lib/finance";
+import {
+  getBudgetAmountInCurrency,
+  getSubscriptionAmountInCurrency,
+  listBudgetCategories,
+  listSavingsGoals,
+  listSubscriptions,
+} from "../lib/finance";
 import { getTransactionAmountInCurrency, listTransactions, parseTransactionDate } from "../lib/transactions";
 import { getUserSettings } from "../lib/settings";
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
@@ -145,19 +151,20 @@ export default function NotificationsPanel() {
 
     if (settings.budgetAlerts) {
       budgetCategories.forEach((category) => {
+        const displayBudget = getBudgetAmountInCurrency(category, settings.currency);
         const spent = currentMonthExpenses
           .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
           .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, settings.currency), 0);
 
-        if (category.budget > 0 && spent / category.budget >= 0.8) {
+        if (displayBudget > 0 && spent / displayBudget >= 0.8) {
           items.push({
             id: `budget-${category.id}`,
-            type: spent > category.budget ? "alert" : "warning",
-            title: spent > category.budget ? "Over Budget" : "Budget Alert",
+            type: spent > displayBudget ? "alert" : "warning",
+            title: spent > displayBudget ? "Over Budget" : "Budget Alert",
             message:
-              spent > category.budget
-                ? `${category.name} is over budget by ${formatCurrency(spent - category.budget, settings.currency)}.`
-                : `${category.name} has used ${((spent / category.budget) * 100).toFixed(0)}% of its monthly budget.`,
+              spent > displayBudget
+                ? `${category.name} is over budget by ${formatCurrency(spent - displayBudget, settings.currency)}.`
+                : `${category.name} has used ${((spent / displayBudget) * 100).toFixed(0)}% of its monthly budget.`,
             time: "this month",
             read: false,
           });
@@ -173,7 +180,7 @@ export default function NotificationsPanel() {
             id: `subscription-${subscription.id}`,
             type: "alert",
             title: "Upcoming Renewal",
-            message: `${subscription.name} renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
+            message: `${subscription.name} (${formatCurrency(getSubscriptionAmountInCurrency(subscription, settings.currency), settings.currency)}) renews in ${daysUntilRenewal} day${daysUntilRenewal === 1 ? "" : "s"}.`,
             time: `renews ${formatDistanceToNow(new Date(subscription.renewalDate), { addSuffix: true })}`,
             read: false,
           });

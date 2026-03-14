@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
+import { BRAND_LOGO_SRC } from "../lib/branding";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -77,7 +78,11 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🐼</div>
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="Bambu logo"
+            className="mx-auto mb-4 h-20 w-20 object-contain"
+          />
           <h1 className="text-3xl mb-2">Bambu</h1>
           <p className="text-muted-foreground">Your Student Budget Companion</p>
         </div>
@@ -190,7 +195,7 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="text-center text-sm text-muted-foreground mt-6">
-          🌱 Track. Save. Grow. 🐼
+          Track. Save. Grow.
         </p>
       </div>
     </div>

@@ -38,8 +38,9 @@ import {
 } from "date-fns";
 import Layout from "../components/Layout";
 import { useUserCurrency } from "../hooks/useUserCurrency";
+import { BRAND_LOGO_SRC } from "../lib/branding";
 import { formatCurrency, formatCurrencyWithCode } from "../lib/currency";
-import { listSavingsGoals } from "../lib/finance";
+import { getSavingsGoalAmountsInCurrency, listSavingsGoals } from "../lib/finance";
 import {
   formatTransactionDate,
   getTransactionAmountInCurrency,
@@ -110,8 +111,11 @@ export default function Home() {
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
   const pinnedGoal = goals.find((goal) => goal.pinned) ?? goals[0] ?? null;
-  const savingsGoal = pinnedGoal?.targetAmount ?? 0;
-  const currentSavings = pinnedGoal?.currentAmount ?? 0;
+  const pinnedGoalAmounts = pinnedGoal
+    ? getSavingsGoalAmountsInCurrency(pinnedGoal, currency)
+    : { targetAmount: 0, currentAmount: 0 };
+  const savingsGoal = pinnedGoalAmounts.targetAmount;
+  const currentSavings = pinnedGoalAmounts.currentAmount;
   const savingsProgress = savingsGoal ? (currentSavings / savingsGoal) * 100 : 0;
 
   const currentMonthTransactions = useMemo(() => {
@@ -274,10 +278,17 @@ export default function Home() {
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-6">
-          <h2 className="text-2xl">
-            {getGreeting()}
-            {userName ? `, ${userName}` : ""}! 🐼
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl">
+              {getGreeting()}
+              {userName ? `, ${userName}` : ""}!
+            </h2>
+            <img
+              src={BRAND_LOGO_SRC}
+              alt="Bambu logo"
+              className="h-8 w-8 object-contain"
+            />
+          </div>
           <p className="text-muted-foreground">Here's your financial overview</p>
         </div>
 

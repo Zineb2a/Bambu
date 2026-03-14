@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { convertCurrency } from "./currency";
 import type {
   BudgetCategory,
   BudgetCategoryInput,
@@ -14,6 +15,9 @@ interface SavingsGoalRow {
   name: string;
   target_amount: number;
   current_amount: number;
+  currency: string | null;
+  original_target_amount: number | null;
+  original_current_amount: number | null;
   emoji: string;
   pinned: boolean;
   created_at: string;
@@ -24,6 +28,8 @@ interface BudgetCategoryRow {
   user_id: string;
   name: string;
   budget: number;
+  currency: string | null;
+  original_budget: number | null;
   icon: string;
   color: string;
   created_at: string;
@@ -36,6 +42,8 @@ interface SubscriptionRow {
   name: string;
   category: string;
   monthly_cost: number;
+  currency: string | null;
+  original_monthly_cost: number | null;
   renewal_date: string;
   has_student_discount: boolean;
   created_at: string;
@@ -47,6 +55,9 @@ const savingsGoalSelect = `
   name,
   target_amount,
   current_amount,
+  currency,
+  original_target_amount,
+  original_current_amount,
   emoji,
   pinned,
   created_at
@@ -57,6 +68,8 @@ const budgetCategorySelect = `
   user_id,
   name,
   budget,
+  currency,
+  original_budget,
   icon,
   color,
   created_at
@@ -69,6 +82,8 @@ const subscriptionSelect = `
   name,
   category,
   monthly_cost,
+  currency,
+  original_monthly_cost,
   renewal_date,
   has_student_discount,
   created_at
@@ -81,6 +96,9 @@ function mapSavingsGoal(row: SavingsGoalRow): SavingsGoal {
     name: row.name,
     targetAmount: Number(row.target_amount),
     currentAmount: Number(row.current_amount),
+    currency: row.currency ?? "USD",
+    originalTargetAmount: Number(row.original_target_amount ?? row.target_amount),
+    originalCurrentAmount: Number(row.original_current_amount ?? row.current_amount),
     emoji: row.emoji,
     pinned: row.pinned,
     createdAt: row.created_at,
@@ -93,6 +111,8 @@ function mapBudgetCategory(row: BudgetCategoryRow): BudgetCategory {
     userId: row.user_id,
     name: row.name,
     budget: Number(row.budget),
+    currency: row.currency ?? "USD",
+    originalBudget: Number(row.original_budget ?? row.budget),
     icon: row.icon,
     color: row.color,
     createdAt: row.created_at,
@@ -107,6 +127,8 @@ function mapSubscription(row: SubscriptionRow): Subscription {
     name: row.name,
     category: row.category,
     monthlyCost: Number(row.monthly_cost),
+    currency: row.currency ?? "USD",
+    originalMonthlyCost: Number(row.original_monthly_cost ?? row.monthly_cost),
     renewalDate: row.renewal_date,
     hasStudentDiscount: row.has_student_discount,
     createdAt: row.created_at,
@@ -137,6 +159,9 @@ export async function createSavingsGoal(userId: string, input: SavingsGoalInput)
       name: input.name,
       target_amount: input.targetAmount,
       current_amount: input.currentAmount,
+      currency: input.currency ?? "USD",
+      original_target_amount: input.originalTargetAmount ?? input.targetAmount,
+      original_current_amount: input.originalCurrentAmount ?? input.currentAmount,
       emoji: input.emoji,
       pinned: input.pinned ?? false,
     })
@@ -160,6 +185,13 @@ export async function updateSavingsGoal(
     ...(updates.name !== undefined ? { name: updates.name } : {}),
     ...(updates.targetAmount !== undefined ? { target_amount: updates.targetAmount } : {}),
     ...(updates.currentAmount !== undefined ? { current_amount: updates.currentAmount } : {}),
+    ...(updates.currency !== undefined ? { currency: updates.currency } : {}),
+    ...(updates.originalTargetAmount !== undefined
+      ? { original_target_amount: updates.originalTargetAmount }
+      : {}),
+    ...(updates.originalCurrentAmount !== undefined
+      ? { original_current_amount: updates.originalCurrentAmount }
+      : {}),
     ...(updates.emoji !== undefined ? { emoji: updates.emoji } : {}),
     ...(updates.pinned !== undefined ? { pinned: updates.pinned } : {}),
   };
@@ -204,6 +236,8 @@ export async function createBudgetCategory(userId: string, input: BudgetCategory
       user_id: userId,
       name: input.name,
       budget: input.budget,
+      currency: input.currency ?? "USD",
+      original_budget: input.originalBudget ?? input.budget,
       icon: input.icon,
       color: input.color,
     })
@@ -222,6 +256,8 @@ export async function updateBudgetCategory(
   const payload = {
     ...(updates.name !== undefined ? { name: updates.name } : {}),
     ...(updates.budget !== undefined ? { budget: updates.budget } : {}),
+    ...(updates.currency !== undefined ? { currency: updates.currency } : {}),
+    ...(updates.originalBudget !== undefined ? { original_budget: updates.originalBudget } : {}),
     ...(updates.icon !== undefined ? { icon: updates.icon } : {}),
     ...(updates.color !== undefined ? { color: updates.color } : {}),
   };
@@ -268,6 +304,8 @@ export async function createSubscription(userId: string, input: SubscriptionInpu
       name: input.name,
       category: input.category,
       monthly_cost: input.monthlyCost,
+      currency: input.currency ?? "USD",
+      original_monthly_cost: input.originalMonthlyCost ?? input.monthlyCost,
       renewal_date: input.renewalDate,
       has_student_discount: input.hasStudentDiscount,
     })
@@ -288,6 +326,10 @@ export async function updateSubscription(
     ...(updates.name !== undefined ? { name: updates.name } : {}),
     ...(updates.category !== undefined ? { category: updates.category } : {}),
     ...(updates.monthlyCost !== undefined ? { monthly_cost: updates.monthlyCost } : {}),
+    ...(updates.currency !== undefined ? { currency: updates.currency } : {}),
+    ...(updates.originalMonthlyCost !== undefined
+      ? { original_monthly_cost: updates.originalMonthlyCost }
+      : {}),
     ...(updates.renewalDate !== undefined ? { renewal_date: updates.renewalDate } : {}),
     ...(updates.hasStudentDiscount !== undefined
       ? { has_student_discount: updates.hasStudentDiscount }
@@ -314,4 +356,19 @@ export async function removeSubscription(userId: string, subscriptionId: string)
     .eq("user_id", userId);
 
   if (error) throw error;
+}
+
+export function getSavingsGoalAmountsInCurrency(goal: SavingsGoal, currency: string) {
+  return {
+    targetAmount: convertCurrency(goal.originalTargetAmount, goal.currency, currency),
+    currentAmount: convertCurrency(goal.originalCurrentAmount, goal.currency, currency),
+  };
+}
+
+export function getBudgetAmountInCurrency(category: BudgetCategory, currency: string) {
+  return convertCurrency(category.originalBudget, category.currency, currency);
+}
+
+export function getSubscriptionAmountInCurrency(subscription: Subscription, currency: string) {
+  return convertCurrency(subscription.originalMonthlyCost, subscription.currency, currency);
 }
