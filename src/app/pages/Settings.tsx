@@ -94,6 +94,19 @@ export default function Settings() {
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [newCard, setNewCard] = useState(emptyCard);
 
+  const splitFullName = (fullName: string) => {
+    const trimmed = fullName.trim();
+    if (!trimmed) {
+      return { firstName: "", lastName: "" };
+    }
+
+    const parts = trimmed.split(/\s+/);
+    return {
+      firstName: parts[0] ?? "",
+      lastName: parts.slice(1).join(" "),
+    };
+  };
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
@@ -125,9 +138,14 @@ export default function Settings() {
           return;
         }
 
+        const fallbackFullName =
+          profile.fullName ??
+          (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "");
+        const parsedName = splitFullName(fallbackFullName);
+
         setProfilePhoto(profile.avatarUrl);
-        setFirstName(profile.firstName ?? "");
-        setLastName(profile.lastName ?? "");
+        setFirstName(profile.firstName ?? parsedName.firstName);
+        setLastName(profile.lastName ?? parsedName.lastName);
         setEmail(profile.email ?? user.email ?? "");
         setLanguage(settings.language);
         setCurrency(settings.currency);
@@ -193,15 +211,32 @@ export default function Settings() {
       );
 
       const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
-      await supabase.auth.updateUser({
-        email,
+      const authUpdates: {
+        email?: string;
+        data?: {
+          full_name: string | null;
+        };
+      } = {
         data: {
           full_name: fullName || null,
         },
-      });
+      };
+
+      if (email && email !== user.email) {
+        authUpdates.email = email;
+      }
+
+      const { error } = await supabase.auth.updateUser(authUpdates);
+      if (error) {
+        throw error;
+      }
 
       window.dispatchEvent(new Event("profileUpdated"));
-      showSaved("Profile saved successfully.");
+      showSaved(
+        authUpdates.email
+          ? "Profile saved. Check your email if Supabase requires email change confirmation."
+          : "Profile saved successfully.",
+      );
     } catch (error) {
       setErrorNotification(error instanceof Error ? error.message : "Failed to save profile");
     }
