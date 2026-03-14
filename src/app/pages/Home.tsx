@@ -37,8 +37,10 @@ import {
   startOfYear,
 } from "date-fns";
 import Layout from "../components/Layout";
+import { listSavingsGoals } from "../lib/finance";
 import { formatTransactionDate, listTransactions } from "../lib/transactions";
 import { useAuth } from "../providers/AuthProvider";
+import type { SavingsGoal } from "../types/finance";
 import type { Transaction } from "../types/transactions";
 
 const CHART_COLORS = ["#2d6a4f", "#52b788", "#74c69d", "#95d5b2", "#b7e4c7", "#40916c"];
@@ -46,15 +48,14 @@ const CHART_COLORS = ["#2d6a4f", "#52b788", "#74c69d", "#95d5b2", "#b7e4c7", "#4
 export default function Home() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState<"week" | "month" | "year">("month");
-  const [savingsGoal] = useState(1200);
-  const [currentSavings] = useState(450);
-  const savingsProgress = (currentSavings / savingsGoal) * 100;
 
   useEffect(() => {
     if (!user) {
       setTransactions([]);
+      setGoals([]);
       setIsLoading(false);
       return;
     }
@@ -65,9 +66,13 @@ export default function Home() {
       setIsLoading(true);
 
       try {
-        const data = await listTransactions(user.id);
+        const [transactionData, goalData] = await Promise.all([
+          listTransactions(user.id),
+          listSavingsGoals(user.id),
+        ]);
         if (isMounted) {
-          setTransactions(data);
+          setTransactions(transactionData);
+          setGoals(goalData);
         }
       } finally {
         if (isMounted) {
@@ -91,6 +96,10 @@ export default function Home() {
   }, [user]);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+  const pinnedGoal = goals.find((goal) => goal.pinned) ?? goals[0] ?? null;
+  const savingsGoal = pinnedGoal?.targetAmount ?? 0;
+  const currentSavings = pinnedGoal?.currentAmount ?? 0;
+  const savingsProgress = savingsGoal ? (currentSavings / savingsGoal) * 100 : 0;
 
   const currentMonthTransactions = useMemo(() => {
     const now = new Date();
@@ -446,10 +455,10 @@ export default function Home() {
           <div className="bg-card rounded-xl p-6 shadow-sm border border-border flex flex-col items-center" style={{ minHeight: "calc(100vh - 450px)" }}>
             <div className="mb-4 text-center">
               <div className="w-20 h-20 bg-accent rounded-2xl flex items-center justify-center shadow-md mb-2">
-                <span className="text-3xl">💻</span>
+                <span className="text-3xl">{pinnedGoal?.emoji ?? "🎯"}</span>
               </div>
               <div className="text-xs text-muted-foreground">Goal!</div>
-              <div className="text-sm font-medium mt-1">${savingsGoal}</div>
+              <div className="text-sm font-medium mt-1">{pinnedGoal ? `$${savingsGoal}` : "No goal pinned"}</div>
             </div>
 
             <div className="relative flex-1 w-16 min-h-[400px] rounded-full overflow-hidden bg-[#E8D7B8] shadow-inner border-2 border-[#D4C5A9]">
@@ -515,7 +524,7 @@ export default function Home() {
               <div className="text-sm">$0</div>
               <div className="mt-3 bg-accent/30 px-3 py-2 rounded-lg max-w-[140px]">
                 <p className="text-xs">
-                  ${savingsGoal - currentSavings} to go! 🎯
+                  {pinnedGoal ? `$${(savingsGoal - currentSavings).toFixed(2)} to go! ${pinnedGoal.emoji}` : "Pin a goal in Budget & Goals"}
                 </p>
               </div>
             </div>
