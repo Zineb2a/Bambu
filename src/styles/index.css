@@ -2,3 +2,7 @@
 @import './tailwind.css';
 @import './theme.css';
 @import './datepicker.css';
+
+html, body, #root {
+  font-family: Georgia, serif !important;
+}
