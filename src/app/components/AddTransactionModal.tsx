@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, DollarSign, Calendar, Tag, FileText, Repeat, Globe } from "lucide-react";
+import { X, DollarSign, Calendar, Tag, FileText, Repeat, Globe, ChevronDown } from "lucide-react";
 import { convertCurrency, EXCHANGE_RATES } from "../lib/currency";
 import { useI18n } from "../providers/I18nProvider";
 
@@ -27,6 +27,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
   const [isRecurring, setIsRecurring] = useState(false);
@@ -68,7 +69,9 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !amount || !category) {
+    const resolvedCategory = category === '__custom__' ? customCategory.trim() : category;
+
+    if (!name || !amount || !resolvedCategory) {
       alert(t("addTransaction.fillAllFields"));
       return;
     }
@@ -82,7 +85,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
       await onAddTransaction({
         name,
         amount: convertedAmount,
-        category,
+        category: resolvedCategory,
         type,
         occurredOn: date,
         currency: selectedCurrency,
@@ -94,6 +97,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
       setName('');
       setAmount('');
       setCategory('');
+      setCustomCategory('');
       setDate(new Date().toISOString().split('T')[0]);
       setSelectedCurrency(defaultCurrency);
       setIsRecurring(false);
@@ -186,17 +190,31 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
               <Tag className="size-4" />
               {t("addTransaction.category")}
             </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              required
-            >
-              <option value="">{t("addTransaction.selectCategory")}</option>
-              {(type === 'expense' ? expenseCategories : incomeCategories).map((cat) => (
-                <option key={cat} value={cat}>{localizeCategory(cat)}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full appearance-none px-4 py-3 pr-11 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                required
+              >
+                <option value="">{t("addTransaction.selectCategory")}</option>
+                {(type === 'expense' ? expenseCategories : incomeCategories).map((cat) => (
+                  <option key={cat} value={cat}>{localizeCategory(cat)}</option>
+                ))}
+                <option value="__custom__">{t("addTransaction.customCategory")}</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+            {category === '__custom__' ? (
+              <input
+                type="text"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder={t("addTransaction.customCategoryPlaceholder")}
+                className="mt-3 w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                required
+              />
+            ) : null}
           </div>
 
           {/* Date */}
@@ -220,17 +238,20 @@ export default function AddTransactionModal({ isOpen, onClose, onAddTransaction,
               <Globe className="size-4" />
               {t("addTransaction.paymentCurrency")}
             </label>
-            <select
-              value={selectedCurrency}
-              onChange={(e) => setSelectedCurrency(e.target.value)}
-              className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            >
-              {Object.keys(rates).map((cur) => (
-                <option key={cur} value={cur}>
-                  {cur} ({currencySymbols[cur]})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+                className="w-full appearance-none px-4 py-3 pr-11 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              >
+                {Object.keys(rates).map((cur) => (
+                  <option key={cur} value={cur}>
+                    {cur} ({currencySymbols[cur]})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
             
             {/* Conversion Preview */}
             {selectedCurrency !== defaultCurrency && amount && parseFloat(amount) > 0 && (

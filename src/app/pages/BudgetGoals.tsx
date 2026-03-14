@@ -74,6 +74,7 @@ const emojiOptions = ["💻", "📱", "🎮", "🚗", "✈️", "🏠", "🎓", 
 interface BudgetCategoryWithSpent extends BudgetCategory {
   spent: number;
   displayBudget: number;
+  isUnbudgeted: boolean;
 }
 
 export default function BudgetGoals() {
@@ -97,6 +98,38 @@ export default function BudgetGoals() {
   const [newCategoryBudget, setNewCategoryBudget] = useState("");
   const [newCategoryIcon, setNewCategoryIcon] = useState("shopping");
   const [newCategoryColor, setNewCategoryColor] = useState("#DDEB9D");
+
+  const getDefaultIconForCategory = (categoryName: string) => {
+    const normalized = categoryName.trim().toLowerCase();
+    if (normalized.includes("food") || normalized.includes("alimentation") || normalized.includes("restaurant")) {
+      return "utensils";
+    }
+    if (normalized.includes("book") || normalized.includes("livre")) {
+      return "book";
+    }
+    if (normalized.includes("transport") || normalized.includes("bus") || normalized.includes("train")) {
+      return "bus";
+    }
+    if (normalized.includes("entertainment") || normalized.includes("loisir") || normalized.includes("movie")) {
+      return "film";
+    }
+    if (normalized.includes("shop") || normalized.includes("achat")) {
+      return "shopping";
+    }
+    if (normalized.includes("coffee") || normalized.includes("cafe")) {
+      return "coffee";
+    }
+    if (normalized.includes("home") || normalized.includes("housing") || normalized.includes("logement")) {
+      return "home";
+    }
+    if (normalized.includes("music") || normalized.includes("spotify")) {
+      return "music";
+    }
+    if (normalized.includes("phone") || normalized.includes("mobile")) {
+      return "smartphone";
+    }
+    return "shopping";
+  };
 
   useEffect(() => {
     if (!user) {
@@ -159,17 +192,47 @@ export default function BudgetGoals() {
         isWithinInterval(parseTransactionDate(transaction.occurredOn), { start, end }),
     );
 
-    return categories.map((category) => {
+    const savedCategories = categories.map((category) => {
       const displayBudget = getBudgetAmountInCurrency(category, currency);
       return {
         ...category,
         displayBudget,
+        isUnbudgeted: false,
         spent: monthlyExpenses
           .filter((transaction) => transaction.category.toLowerCase() === category.name.toLowerCase())
           .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
       };
     });
-  }, [categories, currency, transactions]);
+
+    const missingCategories = Array.from(
+      new Set(
+        monthlyExpenses
+          .map((transaction) => transaction.category.trim())
+          .filter(
+            (name) =>
+              name &&
+              !savedCategories.some((category) => category.name.toLowerCase() === name.toLowerCase()),
+          ),
+      ),
+    ).map((name) => ({
+      id: `missing-${name.toLowerCase()}`,
+      userId: user?.id ?? "",
+      name,
+      budget: 0,
+      currency,
+      originalBudget: 0,
+      icon: getDefaultIconForCategory(name),
+      color: "#95d5b2",
+      createdAt: "",
+      displayBudget: 0,
+      isUnbudgeted: true,
+      spent: monthlyExpenses
+        .filter((transaction) => transaction.category.toLowerCase() === name.toLowerCase())
+        .reduce((sum, transaction) => sum + getTransactionAmountInCurrency(transaction, currency), 0),
+    }));
+
+    return [...savedCategories, ...missingCategories];
+  }, [categories, currency, transactions, user?.id]);
 
   const totalBudget = categoriesWithSpent.reduce((sum, category) => sum + category.displayBudget, 0);
   const totalSpent = categoriesWithSpent.reduce((sum, category) => sum + category.spent, 0);
@@ -309,8 +372,31 @@ export default function BudgetGoals() {
       return;
     }
 
+    const trimmedName = newCategoryName.trim();
+    const existingCategory = categories.find(
+      (category) => category.name.toLowerCase() === trimmedName.toLowerCase(),
+    );
+
+    if (existingCategory) {
+      const updated = await updateBudgetCategory(user.id, existingCategory.id, {
+        name: existingCategory.name,
+        budget: parseFloat(newCategoryBudget),
+        currency,
+        originalBudget: parseFloat(newCategoryBudget),
+        icon: newCategoryIcon,
+        color: newCategoryColor,
+      });
+
+      setCategories(
+        categories.map((category) => (category.id === existingCategory.id ? updated : category)),
+      );
+      resetCategoryForm();
+      window.dispatchEvent(new Event("financialDataChanged"));
+      return;
+    }
+
     const created = await createBudgetCategory(user.id, {
-      name: newCategoryName,
+      name: trimmedName,
       budget: parseFloat(newCategoryBudget),
       currency,
       originalBudget: parseFloat(newCategoryBudget),
@@ -321,6 +407,14 @@ export default function BudgetGoals() {
     setCategories([...categories, created]);
     resetCategoryForm();
     window.dispatchEvent(new Event("financialDataChanged"));
+  };
+
+  const handlePromptSetBudget = (categoryName: string) => {
+    setNewCategoryName(categoryName);
+    setNewCategoryBudget("");
+    setNewCategoryIcon(getDefaultIconForCategory(categoryName));
+    setNewCategoryColor("#95d5b2");
+    setAddingCategory(true);
   };
 
   return (
@@ -550,7 +644,7 @@ export default function BudgetGoals() {
               ) : (
                 categoriesWithSpent.map((category) => {
                   const percentage = category.displayBudget ? (category.spent / category.displayBudget) * 100 : 0;
-                  const isOverBudget = category.spent > category.displayBudget;
+                  const isOverBudget = !category.isUnbudgeted && category.spent > category.displayBudget;
                   const IconComponent = getIcon(category.icon);
 
                   return (
@@ -613,45 +707,66 @@ export default function BudgetGoals() {
                               <div>
                                 <div className="font-medium">{category.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {formatCurrency(category.spent, currency)} / {formatCurrency(category.displayBudget, currency)}
+                                  {category.isUnbudgeted
+                                    ? formatCurrency(category.spent, currency)
+                                    : `${formatCurrency(category.spent, currency)} / ${formatCurrency(category.displayBudget, currency)}`}
                                 </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setEditingCategory(category.id);
-                                  setEditBudget(String(category.originalBudget));
-                                }}
-                                className="p-2 hover:bg-muted rounded-lg transition-colors"
-                              >
-                                <Edit2 className="size-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCategory(category.id)}
-                                className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
-                              >
-                                <Trash2 className="size-4" />
-                              </button>
+                              {category.isUnbudgeted ? (
+                                <button
+                                  onClick={() => handlePromptSetBudget(category.name)}
+                                  className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-sm"
+                                >
+                                  {t("budgetGoalsPage.setBudget")}
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCategory(category.id);
+                                      setEditBudget(String(category.originalBudget));
+                                    }}
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                  >
+                                    <Edit2 className="size-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCategory(category.id)}
+                                    className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                isOverBudget ? "bg-destructive" : "bg-primary"
-                              }`}
-                              style={{ width: `${Math.min(percentage, 100)}%` }}
-                            />
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-2 flex items-center justify-between">
-                            <span>{t("budgetGoalsPage.used", { value: percentage.toFixed(1) })}</span>
-                            {isOverBudget ? (
-                              <span className="text-destructive">⚠️ {t("budgetGoalsPage.over", { amount: formatCurrency(category.spent - category.displayBudget, currency) })}</span>
-                            ) : (
-                              <span className="text-primary">{t("budgetGoalsPage.left", { amount: formatCurrency(category.displayBudget - category.spent, currency) })}</span>
-                            )}
-                          </div>
+                          {category.isUnbudgeted ? (
+                            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                              {t("budgetGoalsPage.setBudgetPrompt", { category: category.name })}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    isOverBudget ? "bg-destructive" : "bg-primary"
+                                  }`}
+                                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                                />
+                              </div>
+                              <div className="text-sm text-muted-foreground mt-2 flex items-center justify-between">
+                                <span>{t("budgetGoalsPage.used", { value: percentage.toFixed(1) })}</span>
+                                {isOverBudget ? (
+                                  <span className="text-destructive">⚠️ {t("budgetGoalsPage.over", { amount: formatCurrency(category.spent - category.displayBudget, currency) })}</span>
+                                ) : (
+                                  <span className="text-primary">{t("budgetGoalsPage.left", { amount: formatCurrency(category.displayBudget - category.spent, currency) })}</span>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

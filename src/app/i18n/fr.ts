@@ -51,6 +51,8 @@ export const fr = {
     amount: "Montant",
     category: "Catégorie",
     selectCategory: "Sélectionner une catégorie",
+    customCategory: "Catégorie personnalisée",
+    customCategoryPlaceholder: "Saisissez un nom de catégorie",
     date: "Date",
     paymentCurrency: "Devise de paiement",
     convertedTo: "Converti en {{currency}} :",
@@ -323,6 +325,9 @@ export const fr = {
     monthlyBudgetLabel: "Budget mensuel",
     icon: "Icône",
     color: "Couleur",
+    setBudget: "Définir un budget",
+    setBudgetPrompt:
+      "{{category}} a des dépenses mais aucun budget pour l'instant. Définissez un budget pour cette catégorie.",
     fillAllFields: "Veuillez remplir tous les champs",
     confirmDeleteGoal: "Voulez-vous vraiment supprimer cet objectif ?",
     confirmDeleteCategory: "Voulez-vous vraiment supprimer cette catégorie ?",
