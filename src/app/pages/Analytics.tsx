@@ -87,6 +87,15 @@ export default function Analytics() {
         setBudgetCategories(categoryData);
         setGoals(goalData);
         setSubscriptions(subscriptionData);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setTransactions([]);
+        setBudgetCategories([]);
+        setGoals([]);
+        setSubscriptions([]);
       } finally {
         if (isMounted) {
           setIsLoading(false);

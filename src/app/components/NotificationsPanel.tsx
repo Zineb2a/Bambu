@@ -24,6 +24,18 @@ interface Notification {
   read: boolean;
 }
 
+const defaultSettings: UserSettings = {
+  userId: "",
+  language: "English",
+  currency: "USD",
+  dateFormat: "MM/DD/YYYY",
+  darkMode: false,
+  budgetAlerts: true,
+  subscriptionReminders: true,
+  weeklySummary: true,
+  savingsMilestones: true,
+};
+
 export default function NotificationsPanel() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -48,23 +60,35 @@ export default function NotificationsPanel() {
     let isMounted = true;
 
     const loadData = async () => {
-      const [transactionData, categoryData, goalData, subscriptionData, settingsData] = await Promise.all([
-        listTransactions(user.id),
-        listBudgetCategories(user.id),
-        listSavingsGoals(user.id),
-        listSubscriptions(user.id),
-        getUserSettings(user.id),
-      ]);
+      try {
+        const [transactionData, categoryData, goalData, subscriptionData, settingsData] = await Promise.all([
+          listTransactions(user.id),
+          listBudgetCategories(user.id),
+          listSavingsGoals(user.id),
+          listSubscriptions(user.id),
+          getUserSettings(user.id),
+        ]);
 
-      if (!isMounted) {
-        return;
+        if (!isMounted) {
+          return;
+        }
+
+        setTransactions(transactionData);
+        setBudgetCategories(categoryData);
+        setGoals(goalData);
+        setSubscriptions(subscriptionData);
+        setSettings(settingsData);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setTransactions([]);
+        setBudgetCategories([]);
+        setGoals([]);
+        setSubscriptions([]);
+        setSettings({ ...defaultSettings, userId: user.id });
       }
-
-      setTransactions(transactionData);
-      setBudgetCategories(categoryData);
-      setGoals(goalData);
-      setSubscriptions(subscriptionData);
-      setSettings(settingsData);
     };
 
     loadData();

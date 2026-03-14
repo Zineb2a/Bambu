@@ -26,9 +26,15 @@ export default function Layout({ children }: LayoutProps) {
     let isMounted = true;
 
     const loadProfile = async () => {
-      const profile = await getUserProfile(user.id, user.email ?? null);
-      if (isMounted) {
-        setProfilePhoto(profile.avatarUrl);
+      try {
+        const profile = await getUserProfile(user.id, user.email ?? null);
+        if (isMounted) {
+          setProfilePhoto(profile.avatarUrl);
+        }
+      } catch {
+        if (isMounted) {
+          setProfilePhoto(null);
+        }
       }
     };
 

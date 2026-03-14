@@ -74,6 +74,11 @@ export default function Home() {
           setTransactions(transactionData);
           setGoals(goalData);
         }
+      } catch {
+        if (isMounted) {
+          setTransactions([]);
+          setGoals([]);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
