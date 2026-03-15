@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { Bell, X, AlertCircle, Info, CheckCircle } from "lucide-react";
 import {
   differenceInCalendarDays,
@@ -12,6 +13,7 @@ import {
 import { formatCurrency } from "../lib/currency";
 import { useAuth } from "../providers/AuthProvider";
 import {
+  createSubscription,
   getBudgetAmountInCurrency,
   getSavingsGoalAmountsInCurrency,
   getSubscriptionAmountInCurrency,
@@ -27,22 +29,29 @@ import type { AppNotification, AppNotificationInput } from "../types/notificatio
 import type { BudgetCategory, SavingsGoal, Subscription } from "../types/finance";
 import type { UserSettings } from "../types/settings";
 import type { Transaction } from "../types/transactions";
+import {
+  detectRecurringSubscriptionCandidates,
+  normalizeMerchantName,
+} from "../../shared/studentDiscountDetector";
 
 const defaultSettings: UserSettings = {
   userId: "",
   language: "English",
   currency: "USD",
+  country: "US",
   dateFormat: "MM/DD/YYYY",
   darkMode: false,
   budgetAlerts: true,
   subscriptionReminders: true,
   weeklySummary: true,
   savingsMilestones: true,
+  onboardingCompleted: false,
 };
 
 export default function NotificationsPanel() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
@@ -50,6 +59,69 @@ export default function NotificationsPanel() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  useEffect(() => {
+    if (!user || !settings) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const syncDetectedSubscriptions = async () => {
+      const candidates = detectRecurringSubscriptionCandidates({
+        transactions: transactions.map((transaction) => ({
+          id: transaction.id,
+          amount: transaction.originalAmount,
+          merchantName: transaction.name,
+          sourceType: "transaction",
+          date: transaction.occurredOn,
+          category: transaction.category,
+          currency: transaction.currency,
+          type: transaction.type,
+          isRecurring: transaction.isRecurring,
+          recurringFrequency: transaction.recurringFrequency,
+        })),
+        displayCurrency: settings.currency,
+      });
+
+      const existingByMerchant = new Set(
+        subscriptions.map((subscription) => normalizeMerchantName(subscription.name)),
+      );
+
+      const missingCandidates = candidates.filter(
+        (candidate) => !existingByMerchant.has(candidate.normalizedMerchant),
+      );
+
+      if (missingCandidates.length === 0) {
+        return;
+      }
+
+      await Promise.all(
+        missingCandidates.map(async (candidate) => {
+          await createSubscription(user.id, {
+            emoji: "📱",
+            name: candidate.displayName,
+            category: "Other",
+            monthlyCost: candidate.currentMonthlySpend,
+            currency: settings.currency,
+            originalMonthlyCost: candidate.currentMonthlySpend,
+            renewalDate: candidate.lastChargeDate || new Date().toISOString().split("T")[0],
+            hasStudentDiscount: false,
+          });
+        }),
+      );
+
+      if (isMounted) {
+        window.dispatchEvent(new Event("financialDataChanged"));
+      }
+    };
+
+    void syncDetectedSubscriptions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [settings, subscriptions, transactions, user]);
 
   useEffect(() => {
     if (!user) {
@@ -226,6 +298,48 @@ export default function NotificationsPanel() {
         }
       });
     }
+
+    const detectedSubscriptionNotifications = detectRecurringSubscriptionCandidates({
+      transactions: transactions.map((transaction) => ({
+        id: transaction.id,
+        amount: transaction.originalAmount,
+        merchantName: transaction.name,
+        sourceType: "transaction",
+        date: transaction.occurredOn,
+        category: transaction.category,
+        currency: transaction.currency,
+        type: transaction.type,
+        isRecurring: transaction.isRecurring,
+        recurringFrequency: transaction.recurringFrequency,
+      })),
+      displayCurrency: settings.currency,
+    });
+
+    const subscriptionNameSet = new Set(
+      subscriptions.map((subscription) => normalizeMerchantName(subscription.name)),
+    );
+
+    detectedSubscriptionNotifications.forEach((candidate) => {
+      if (!subscriptionNameSet.has(candidate.normalizedMerchant)) {
+        return;
+      }
+
+      generated.push({
+        sourceKey: `subscription-detected-${candidate.normalizedMerchant}`,
+        type: "info",
+        title: t("notifications.subscriptionDetected"),
+        message: t("notifications.subscriptionDetectedMessage", {
+          name: candidate.displayName,
+          amount: formatCurrency(candidate.currentMonthlySpend, settings.currency),
+        }),
+        payload: {
+          route: "/subscriptions",
+          actionLabel: t("notifications.reviewSubscription"),
+          merchant: candidate.normalizedMerchant,
+        },
+        createdAt: candidate.lastChargeDate,
+      });
+    });
 
     if (settings.weeklySummary) {
       const thisMonthIncome = transactions
@@ -418,6 +532,17 @@ export default function NotificationsPanel() {
     await dismissNotification(user.id, id);
   };
 
+  const handleNotificationAction = async (notification: AppNotification) => {
+    const route = typeof notification.payload.route === "string" ? notification.payload.route : null;
+    if (!route) {
+      return;
+    }
+
+    await handleMarkAsRead(notification.id);
+    setIsOpen(false);
+    navigate(route);
+  };
+
   const visibleNotifications = useMemo(
     () => notifications.filter((notification) => !notification.dismissedAt).slice(0, 8),
     [notifications],
@@ -496,6 +621,17 @@ export default function NotificationsPanel() {
                             </button>
                           </div>
                           <p className="text-sm text-foreground/80 mb-2">{notification.message}</p>
+                          {typeof notification.payload.actionLabel === "string" ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleNotificationAction(notification);
+                              }}
+                              className="mb-2 inline-flex rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:opacity-90 transition-opacity"
+                            >
+                              {notification.payload.actionLabel}
+                            </button>
+                          ) : null}
                           <p className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                           </p>

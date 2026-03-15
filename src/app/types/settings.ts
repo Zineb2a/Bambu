@@ -11,23 +11,27 @@ export interface UserSettings {
   userId: string;
   language: string;
   currency: string;
+  country: string;
   dateFormat: string;
   darkMode: boolean;
   budgetAlerts: boolean;
   subscriptionReminders: boolean;
   weeklySummary: boolean;
   savingsMilestones: boolean;
+  onboardingCompleted: boolean;
 }
 
 export interface UserSettingsInput {
   language: string;
   currency: string;
+  country: string;
   dateFormat: string;
   darkMode: boolean;
   budgetAlerts: boolean;
   subscriptionReminders: boolean;
   weeklySummary: boolean;
   savingsMilestones: boolean;
+  onboardingCompleted: boolean;
 }
 
 export interface LinkedCard {

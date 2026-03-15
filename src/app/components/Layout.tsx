@@ -1,6 +1,6 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { Moon, Plus, Sun, User } from "lucide-react";
+import { BarChart3, Menu, Moon, Plus, Sun, Target, User, Wallet } from "lucide-react";
 import Navigation from "./Navigation";
 import NotificationsPanel from "./NotificationsPanel";
 import AddTransactionModal from "./AddTransactionModal";
@@ -9,6 +9,7 @@ import { useI18n } from "../providers/I18nProvider";
 import { createTransaction } from "../lib/transactions";
 import { getUserProfile, getUserSettings, updateUserSettings } from "../lib/settings";
 import { BRAND_LOGO_SRC } from "../lib/branding";
+import { useIsMobile } from "./ui/use-mobile";
 import type { UserSettings } from "../types/settings";
 
 interface LayoutProps {
@@ -23,6 +24,32 @@ export default function Layout({ children }: LayoutProps) {
   const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [walkthroughStep, setWalkthroughStep] = useState(0);
+  const [isSavingWalkthrough, setIsSavingWalkthrough] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  const walkthroughSteps = useMemo(
+    () => [
+      {
+        icon: <Wallet className="size-6 text-primary" />,
+        title: t("walkthrough.step1Title"),
+        description: t("walkthrough.step1Description"),
+      },
+      {
+        icon: <Plus className="size-6 text-primary" />,
+        title: t("walkthrough.step2Title"),
+        description: t("walkthrough.step2Description"),
+      },
+      {
+        icon: <Target className="size-6 text-primary" />,
+        title: t("walkthrough.step3Title"),
+        description: t("walkthrough.step3Description"),
+      },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -46,6 +73,8 @@ export default function Layout({ children }: LayoutProps) {
           setDefaultCurrency(settings.currency);
           setUserSettings(settings);
           setDarkMode(settings.darkMode);
+          setShowWalkthrough(!settings.onboardingCompleted);
+          setWalkthroughStep(0);
         }
       } catch {
         if (isMounted) {
@@ -53,6 +82,8 @@ export default function Layout({ children }: LayoutProps) {
           setDefaultCurrency("USD");
           setUserSettings(null);
           setDarkMode(false);
+          setShowWalkthrough(false);
+          setWalkthroughStep(0);
         }
       }
     };
@@ -74,6 +105,12 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileNavOpen(false);
+    }
+  }, [isMobile]);
 
   const handleAddTransaction = async (transaction: {
     name: string;
@@ -115,42 +152,78 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
+  const handleCompleteWalkthrough = async () => {
+    if (!user || !userSettings || isSavingWalkthrough) {
+      return;
+    }
+
+    setIsSavingWalkthrough(true);
+
+    try {
+      const saved = await updateUserSettings(user.id, {
+        ...userSettings,
+        onboardingCompleted: true,
+      });
+      setUserSettings(saved);
+      setShowWalkthrough(false);
+      window.dispatchEvent(new Event("settingsUpdated"));
+    } finally {
+      setIsSavingWalkthrough(false);
+    }
+  };
+
+  const currentWalkthroughStep = walkthroughSteps[walkthroughStep];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header - Fixed at top */}
-      <header className="fixed inset-x-0 top-0 z-50 h-28 bg-primary text-primary-foreground px-6 shadow-md">
-        <div className="max-w-7xl mx-auto flex h-full items-center justify-between">
-          <div className="w-32"></div> {/* Spacer for balance */}
-          <Link to="/" className="flex items-center gap-4">
-            <div className="h-16 w-16 flex items-center justify-center">
+      <header className="fixed inset-x-0 top-0 z-50 h-20 bg-primary px-4 text-primary-foreground shadow-md md:h-28 md:px-6">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-3">
+          <div className="flex w-24 items-center md:w-32">
+            {isMobile ? (
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(true)}
+                aria-label="Open menu"
+                aria-expanded={isMobileNavOpen}
+                className="rounded-lg bg-white/18 p-2 transition-colors hover:bg-white/28"
+              >
+                <Menu className="size-5 text-white" />
+              </button>
+            ) : null}
+          </div>
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 md:gap-4">
+            <div className="flex h-11 w-11 items-center justify-center sm:h-12 sm:w-12 md:h-16 md:w-16">
               <img
                 src={BRAND_LOGO_SRC}
                 alt="Bambuu logo"
                 className="h-full w-full object-contain"
               />
             </div>
-            <h1 className="text-2xl font-semibold text-white">BAMBUU</h1>
+            <h1 className="text-base font-semibold tracking-[0.18em] text-white sm:text-lg md:text-2xl">
+              BAMBUU
+            </h1>
           </Link>
-          <div className="flex items-center gap-3 w-40 justify-end">
+          <div className="flex w-auto items-center justify-end gap-2 sm:gap-3 md:w-40">
             <NotificationsPanel />
             <button
               type="button"
               onClick={handleToggleDarkMode}
               aria-label={t("settingsPage.darkMode")}
-              className="rounded-lg bg-white/20 p-2 hover:bg-white/30 transition-colors"
+              className="rounded-lg bg-white/20 p-2 transition-colors hover:bg-white/30"
             >
-              {darkMode ? <Sun className="size-5 text-white" /> : <Moon className="size-5 text-white" />}
+              {darkMode ? <Sun className="size-4 text-white md:size-5" /> : <Moon className="size-4 text-white md:size-5" />}
             </button>
             <Link to="/settings" className="flex-shrink-0">
               {profilePhoto ? (
                 <img
                   src={profilePhoto}
                   alt="Profile"
-                  className="w-11 h-11 rounded-full object-cover border-2 border-white/30 hover:border-white/50 transition-colors cursor-pointer"
+                  className="h-9 w-9 cursor-pointer rounded-full border-2 border-white/30 object-cover transition-colors hover:border-white/50 md:h-11 md:w-11"
                 />
               ) : (
-                <div className="w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center cursor-pointer">
-                  <User className="size-6 text-white" />
+                <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 md:h-11 md:w-11">
+                  <User className="size-5 text-white md:size-6" />
                 </div>
               )}
             </Link>
@@ -159,10 +232,10 @@ export default function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Navigation */}
-      <Navigation />
+      <Navigation mobileOpen={isMobileNavOpen} onMobileOpenChange={setIsMobileNavOpen} />
 
       {/* Main Content */}
-      <main className="pt-[11.5rem]">
+      <main className="pt-20 md:pt-[11.5rem]">
         {children}
       </main>
 
@@ -184,6 +257,79 @@ export default function Layout({ children }: LayoutProps) {
         onAddTransaction={handleAddTransaction}
         defaultCurrency={defaultCurrency}
       />
+
+      {user && userSettings && showWalkthrough && currentWalkthroughStep ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                  <BarChart3 className="size-3.5" />
+                  {t("walkthrough.badge")}
+                </div>
+                <h2 className="text-xl">{t("walkthrough.title")}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t("walkthrough.subtitle")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleCompleteWalkthrough()}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                {t("walkthrough.skip")}
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-muted/40 p-5">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                {currentWalkthroughStep.icon}
+              </div>
+              <h3 className="mb-2">{currentWalkthroughStep.title}</h3>
+              <p className="text-sm text-muted-foreground">{currentWalkthroughStep.description}</p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {walkthroughSteps.map((step, index) => (
+                <div
+                  key={step.title}
+                  className={`h-2.5 rounded-full transition-all ${
+                    index === walkthroughStep ? "w-8 bg-primary" : "w-2.5 bg-border"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setWalkthroughStep((current) => Math.max(current - 1, 0))}
+                disabled={walkthroughStep === 0}
+                className="rounded-lg border border-border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("walkthrough.back")}
+              </button>
+
+              {walkthroughStep < walkthroughSteps.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setWalkthroughStep((current) => Math.min(current + 1, walkthroughSteps.length - 1))}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
+                >
+                  {t("walkthrough.next")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleCompleteWalkthrough()}
+                  disabled={isSavingWalkthrough}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingWalkthrough ? t("common.saving") : t("walkthrough.finish")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

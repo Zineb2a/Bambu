@@ -51,6 +51,15 @@ const currencies = [
   { code: "MXN", symbol: "$", name: "Mexican Peso" },
 ];
 
+const countries = [
+  { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "FR", name: "France" },
+  { code: "AU", name: "Australia" },
+  { code: "IN", name: "India" },
+];
+
 const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD"];
 
 const emptyCard = {
@@ -104,6 +113,7 @@ export default function Settings() {
   const [email, setEmail] = useState(user?.email ?? "");
   const [language, setLanguage] = useState("English");
   const [currency, setCurrency] = useState("USD");
+  const [country, setCountry] = useState("US");
   const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
   const [darkMode, setDarkMode] = useState(false);
   const [savedNotification, setSavedNotification] = useState("");
@@ -112,6 +122,7 @@ export default function Settings() {
   const [subscriptionReminders, setSubscriptionReminders] = useState(true);
   const [weeklySummary, setWeeklySummary] = useState(true);
   const [savingsMilestones, setSavingsMilestones] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -175,12 +186,14 @@ export default function Settings() {
         setEmail(profile.email ?? user.email ?? "");
         setLanguage(settings.language);
         setCurrency(settings.currency);
+        setCountry(settings.country);
         setDateFormat(settings.dateFormat);
         setDarkMode(settings.darkMode);
         setBudgetAlerts(settings.budgetAlerts);
         setSubscriptionReminders(settings.subscriptionReminders);
         setWeeklySummary(settings.weeklySummary);
         setSavingsMilestones(settings.savingsMilestones);
+        setOnboardingCompleted(settings.onboardingCompleted);
         setLinkedCards(cards);
       } catch (error) {
         if (isMounted) {
@@ -276,12 +289,14 @@ export default function Settings() {
   const persistPreferences = async (overrides?: Partial<{
     language: string;
     currency: string;
+    country: string;
     dateFormat: string;
     darkMode: boolean;
     budgetAlerts: boolean;
     subscriptionReminders: boolean;
     weeklySummary: boolean;
     savingsMilestones: boolean;
+    onboardingCompleted: boolean;
   }>) => {
     if (!user) {
       return;
@@ -290,12 +305,14 @@ export default function Settings() {
     const next = {
       language,
       currency,
+      country,
       dateFormat,
       darkMode,
       budgetAlerts,
       subscriptionReminders,
       weeklySummary,
       savingsMilestones,
+      onboardingCompleted,
       ...overrides,
     };
 
@@ -303,12 +320,14 @@ export default function Settings() {
       const saved = await updateUserSettings(user.id, next);
       setLanguage(saved.language);
       setCurrency(saved.currency);
+      setCountry(saved.country);
       setDateFormat(saved.dateFormat);
       setDarkMode(saved.darkMode);
       setBudgetAlerts(saved.budgetAlerts);
       setSubscriptionReminders(saved.subscriptionReminders);
       setWeeklySummary(saved.weeklySummary);
       setSavingsMilestones(saved.savingsMilestones);
+      setOnboardingCompleted(saved.onboardingCompleted);
       window.dispatchEvent(new Event("settingsUpdated"));
     } catch (error) {
       setErrorNotification(error instanceof Error ? error.message : t("settingsPage.failedUpdateSettings"));
@@ -547,6 +566,31 @@ export default function Settings() {
             ))}
           </select>
           <p className="text-sm text-muted-foreground mt-2">{t("settingsPage.defaultCurrencyHelp")}</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="size-5 text-primary" />
+            <h3>Country</h3>
+          </div>
+
+          <select
+            value={country}
+            onChange={(e) => {
+              setCountry(e.target.value);
+              void persistPreferences({ country: e.target.value });
+            }}
+            className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            {countries.map((countryOption) => (
+              <option key={countryOption.code} value={countryOption.code}>
+                {countryOption.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-muted-foreground mt-2">
+            Used to filter region-specific student discount offers.
+          </p>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-6">

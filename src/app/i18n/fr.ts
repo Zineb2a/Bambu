@@ -80,6 +80,10 @@ export const fr = {
     budgetUsedMessage: "{{name}} a utilisé {{progress}} % de son budget mensuel.",
     upcomingRenewal: "Renouvellement à venir",
     renewsIn: "{{name}} ({{amount}}) se renouvelle dans {{days}} jour{{suffix}}.",
+    subscriptionDetected: "Abonnement détecté",
+    subscriptionDetectedMessage:
+      "Nous avons remarqué que {{name}} ressemble à un abonnement récurrent et l'avons ajouté à vos abonnements pour environ {{amount}} par mois. Veuillez le vérifier.",
+    reviewSubscription: "Vérifier l'abonnement",
     spendingSummary: "Résumé des dépenses",
     summaryWithIncome: "Revenus {{income}}, dépenses {{expenses}}. {{trend}}",
     summaryExpensesOnly: "Les dépenses totalisent {{expenses}} ce mois-ci.",
@@ -92,6 +96,24 @@ export const fr = {
       "Il vous restait {{amount}} le mois dernier. Pensez à le déplacer vers {{goal}}.",
     thisMonth: "ce mois-ci",
     updatedRecently: "mis à jour récemment",
+  },
+  walkthrough: {
+    badge: "Visite rapide",
+    title: "Bienvenue sur Bambuu",
+    subtitle: "Un mini tutoriel de 20 secondes pour votre première connexion.",
+    step1Title: "Voyez votre argent au même endroit",
+    step1Description:
+      "L'accueil affiche votre solde, vos dépenses, votre progression budget et votre objectif d'épargne épinglé.",
+    step2Title: "Utilisez le bouton + pour aller vite",
+    step2Description:
+      "Ajoutez des revenus ou dépenses depuis n'importe quelle page. Les transactions récurrentes gardent le budget à jour.",
+    step3Title: "Progressez avec objectifs et analyses",
+    step3Description:
+      "Suivez vos objectifs d'épargne, consultez les analyses et utilisez les investissements pour votre portefeuille et suggestions.",
+    back: "Retour",
+    next: "Suivant",
+    skip: "Passer",
+    finish: "Commencer",
   },
   home: {
     goodMorning: "Bonjour",

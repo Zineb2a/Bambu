@@ -80,6 +80,10 @@ export const en = {
     budgetUsedMessage: "{{name}} has used {{progress}}% of its monthly budget.",
     upcomingRenewal: "Upcoming Renewal",
     renewsIn: "{{name}} ({{amount}}) renews in {{days}} day{{suffix}}.",
+    subscriptionDetected: "Subscription detected",
+    subscriptionDetectedMessage:
+      "We noticed {{name}} looks like a recurring subscription and added it to your subscriptions at about {{amount}} per month. Please review it.",
+    reviewSubscription: "Review subscription",
     spendingSummary: "Spending Summary",
     summaryWithIncome: "Income {{income}}, expenses {{expenses}}. {{trend}}",
     summaryExpensesOnly: "Expenses total {{expenses}} this month.",
@@ -92,6 +96,24 @@ export const en = {
       "You had {{amount}} left over last month. Consider moving it to {{goal}}.",
     thisMonth: "this month",
     updatedRecently: "updated recently",
+  },
+  walkthrough: {
+    badge: "Quick tour",
+    title: "Welcome to Bambuu",
+    subtitle: "A 20-second walkthrough for your first login.",
+    step1Title: "See your money in one place",
+    step1Description:
+      "Home gives you your balance, spending, budget progress, and your pinned savings goal at a glance.",
+    step2Title: "Use the + button to start fast",
+    step2Description:
+      "Add income or expenses from anywhere in the app. Recurring transactions help keep your budget current.",
+    step3Title: "Grow with goals and insights",
+    step3Description:
+      "Track savings goals, review analytics, and use investments to follow your portfolio and suggestions.",
+    back: "Back",
+    next: "Next",
+    skip: "Skip",
+    finish: "Start using Bambuu",
   },
   home: {
     goodMorning: "Good morning",

@@ -19,12 +19,14 @@ interface UserSettingsRow {
   user_id: string;
   language: string;
   currency: string;
+  country: string;
   date_format: string;
   dark_mode: boolean;
   budget_alerts: boolean;
   subscription_reminders: boolean;
   weekly_summary: boolean;
   savings_milestones: boolean;
+  onboarding_completed: boolean;
 }
 
 interface LinkedCardRow {
@@ -54,12 +56,14 @@ function mapSettings(row: UserSettingsRow): UserSettings {
     userId: row.user_id,
     language: row.language,
     currency: row.currency,
+    country: row.country,
     dateFormat: row.date_format,
     darkMode: row.dark_mode,
     budgetAlerts: row.budget_alerts,
     subscriptionReminders: row.subscription_reminders,
     weeklySummary: row.weekly_summary,
     savingsMilestones: row.savings_milestones,
+    onboardingCompleted: row.onboarding_completed,
   };
 }
 
@@ -131,7 +135,7 @@ export async function getUserSettings(userId: string) {
   const { data, error } = await supabase
     .from("user_settings")
     .select(
-      "user_id, language, currency, date_format, dark_mode, budget_alerts, subscription_reminders, weekly_summary, savings_milestones",
+      "user_id, language, currency, country, date_format, dark_mode, budget_alerts, subscription_reminders, weekly_summary, savings_milestones, onboarding_completed",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -143,12 +147,14 @@ export async function getUserSettings(userId: string) {
       userId,
       language: "English",
       currency: "USD",
+      country: "US",
       dateFormat: "MM/DD/YYYY",
       darkMode: false,
       budgetAlerts: true,
       subscriptionReminders: true,
       weeklySummary: true,
       savingsMilestones: true,
+      onboardingCompleted: false,
     } satisfies UserSettings;
   }
 
@@ -162,16 +168,18 @@ export async function updateUserSettings(userId: string, input: UserSettingsInpu
       user_id: userId,
       language: input.language,
       currency: input.currency,
+      country: input.country,
       date_format: input.dateFormat,
       dark_mode: input.darkMode,
       budget_alerts: input.budgetAlerts,
       subscription_reminders: input.subscriptionReminders,
       weekly_summary: input.weeklySummary,
       savings_milestones: input.savingsMilestones,
+      onboarding_completed: input.onboardingCompleted,
       updated_at: new Date().toISOString(),
     })
     .select(
-      "user_id, language, currency, date_format, dark_mode, budget_alerts, subscription_reminders, weekly_summary, savings_milestones",
+      "user_id, language, currency, country, date_format, dark_mode, budget_alerts, subscription_reminders, weekly_summary, savings_milestones, onboarding_completed",
     )
     .single();
 

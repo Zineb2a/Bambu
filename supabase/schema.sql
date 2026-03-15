@@ -169,24 +169,28 @@ create table if not exists public.user_settings (
   user_id uuid primary key references auth.users (id) on delete cascade,
   language text not null default 'English',
   currency text not null default 'USD',
+  country text not null default 'US',
   date_format text not null default 'MM/DD/YYYY',
   dark_mode boolean not null default false,
   budget_alerts boolean not null default true,
   subscription_reminders boolean not null default true,
   weekly_summary boolean not null default true,
   savings_milestones boolean not null default true,
+  onboarding_completed boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.user_settings add column if not exists language text not null default 'English';
 alter table public.user_settings add column if not exists currency text not null default 'USD';
+alter table public.user_settings add column if not exists country text not null default 'US';
 alter table public.user_settings add column if not exists date_format text not null default 'MM/DD/YYYY';
 alter table public.user_settings add column if not exists dark_mode boolean not null default false;
 alter table public.user_settings add column if not exists budget_alerts boolean not null default true;
 alter table public.user_settings add column if not exists subscription_reminders boolean not null default true;
 alter table public.user_settings add column if not exists weekly_summary boolean not null default true;
 alter table public.user_settings add column if not exists savings_milestones boolean not null default true;
+alter table public.user_settings add column if not exists onboarding_completed boolean not null default false;
 alter table public.user_settings add column if not exists created_at timestamptz not null default timezone('utc', now());
 alter table public.user_settings add column if not exists updated_at timestamptz not null default timezone('utc', now());
 

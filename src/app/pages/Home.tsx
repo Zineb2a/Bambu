@@ -54,6 +54,7 @@ import {
   listTransactions,
   parseTransactionDate,
 } from "../lib/transactions";
+import { getUserSettings } from "../lib/settings";
 import { useAuth } from "../providers/AuthProvider";
 import { useI18n } from "../providers/I18nProvider";
 import type { BudgetCategory, SavingsGoal } from "../types/finance";
@@ -68,6 +69,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
+  const [userCountry, setUserCountry] = useState("US");
   const [isLoading, setIsLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState<"week" | "month" | "year">("month");
   const [showContributionModal, setShowContributionModal] = useState(false);
@@ -79,6 +81,7 @@ export default function Home() {
       setTransactions([]);
       setGoals([]);
       setBudgetCategories([]);
+      setUserCountry("US");
       setIsLoading(false);
       return;
     }
@@ -89,21 +92,24 @@ export default function Home() {
       setIsLoading(true);
 
       try {
-        const [transactionData, goalData, budgetData] = await Promise.all([
+        const [transactionData, goalData, budgetData, settings] = await Promise.all([
           listTransactions(user.id),
           listSavingsGoals(user.id),
           listBudgetCategories(user.id),
+          getUserSettings(user.id),
         ]);
         if (isMounted) {
           setTransactions(transactionData);
           setGoals(goalData);
           setBudgetCategories(budgetData);
+          setUserCountry(settings.country ?? "US");
         }
       } catch {
         if (isMounted) {
           setTransactions([]);
           setGoals([]);
           setBudgetCategories([]);
+          setUserCountry("US");
         }
       } finally {
         if (isMounted) {
@@ -118,11 +124,17 @@ export default function Home() {
       loadTransactions();
     };
 
+    const handleSettingsUpdated = () => {
+      loadTransactions();
+    };
+
     window.addEventListener("transactionsChanged", handleTransactionsChanged);
+    window.addEventListener("settingsUpdated", handleSettingsUpdated);
 
     return () => {
       isMounted = false;
       window.removeEventListener("transactionsChanged", handleTransactionsChanged);
+      window.removeEventListener("settingsUpdated", handleSettingsUpdated);
     };
   }, [user]);
 
@@ -615,15 +627,6 @@ export default function Home() {
               </div>
               <div className="text-xs text-muted-foreground">{t("home.goal")}</div>
               <div className="text-sm font-medium mt-1">{pinnedGoal ? formatCurrency(savingsGoal, currency) : t("home.noGoalPinned")}</div>
-              {pinnedGoal ? (
-                <button
-                  onClick={() => setShowContributionModal(true)}
-                  className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition-opacity"
-                >
-                  <PiggyBank className="size-4" />
-                  {t("home.contribute")}
-                </button>
-              ) : null}
             </div>
 
             <div className="mb-4 w-full sm:hidden">
@@ -643,91 +646,65 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative hidden w-14 min-h-[240px] origin-top overflow-visible sm:block sm:w-16 sm:min-h-[300px]">
-              <div className="absolute bottom-0 left-1/2 h-full w-14 -translate-x-1/2 rounded-[999px] bg-[#eef1e6] shadow-inner border border-[#d8ddcc] sm:w-16" />
-
-              <div className="absolute bottom-0 left-1/2 h-full w-7 -translate-x-1/2 rounded-[999px] border border-[#5b8d3a] bg-gradient-to-b from-[#a8d86d] via-[#78b94f] to-[#4d8731] shadow-[inset_-6px_0_8px_rgba(255,255,255,0.28),inset_8px_0_12px_rgba(0,0,0,0.14)] sm:w-8">
-                <div className="absolute inset-y-0 left-[42%] w-[2px] bg-white/20" />
-                <div className="absolute left-0 right-0 top-[12%] h-[6px] rounded-full bg-[#628d3e]" />
-                <div className="absolute left-0 right-0 top-[28%] h-[6px] rounded-full bg-[#628d3e]" />
-                <div className="absolute left-0 right-0 top-[44%] h-[6px] rounded-full bg-[#628d3e]" />
-                <div className="absolute left-0 right-0 top-[60%] h-[6px] rounded-full bg-[#628d3e]" />
-                <div className="absolute left-0 right-0 top-[76%] h-[6px] rounded-full bg-[#628d3e]" />
-                <div className="absolute left-0 right-0 top-[92%] h-[6px] rounded-full bg-[#628d3e]" />
-              </div>
-
-              <div className="absolute left-1/2 top-[10%] -translate-x-[18px] -translate-y-1/2 rotate-[-28deg]">
-                <svg width="58" height="34" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[42px] sm:w-[70px]">
-                  <path d="M95 50C77 48 62 43 46 31C32 20 20 11 6 7C14 23 27 35 43 43C59 51 76 54 95 50Z" fill="#4b9847" />
-                  <path d="M87 46C71 43 57 37 43 25" stroke="#a8df8c" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                </svg>
-              </div>
-
-              <div className="absolute left-1/2 top-[34%] translate-x-[12px] -translate-y-1/2 rotate-[24deg]">
-                <svg width="60" height="36" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[44px] sm:w-[72px]">
-                  <path d="M6 52C24 49 39 43 55 31C69 20 81 11 95 7C87 24 74 36 58 44C42 52 25 55 6 52Z" fill="#4f9f4c" />
-                  <path d="M14 47C30 43 44 37 58 25" stroke="#b4e79a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                </svg>
-              </div>
-
-              <div className="absolute left-1/2 top-[58%] -translate-x-[20px] -translate-y-1/2 rotate-[-24deg] opacity-90">
-                <svg width="52" height="32" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[38px] sm:w-[64px]">
-                  <path d="M95 50C77 48 62 43 46 31C32 20 20 11 6 7C14 23 27 35 43 43C59 51 76 54 95 50Z" fill="#58ab52" />
-                  <path d="M87 46C71 43 57 37 43 25" stroke="#c4efab" strokeWidth="2.3" fill="none" strokeLinecap="round" />
-                </svg>
+            <div className="relative hidden w-[132px] min-h-[250px] overflow-visible pt-6 sm:block sm:min-h-[320px]">
+              <div className="absolute inset-y-0 left-1/2 w-[86px] -translate-x-1/2 overflow-hidden rounded-[999px]">
+                <img
+                  src="/bamboo.png"
+                  alt="Bamboo"
+                  className="absolute inset-0 h-full w-full object-contain object-center opacity-95"
+                />
               </div>
 
               <div
-                className="absolute left-1/2 -translate-x-[58%] transition-all duration-700 ease-out"
-                style={{ bottom: `${Math.max(savingsProgress - 4, 0)}%` }}
+                className="absolute left-1/2 z-10 transition-all duration-700 ease-out"
+                style={{ bottom: `${Math.min(Math.max(savingsProgress - 6, 0), 74)}%`, transform: "translateX(-56%)" }}
               >
-                <div className="relative h-[78px] w-[74px] sm:h-[92px] sm:w-[88px]">
-                  <svg viewBox="0 0 110 110" className="h-full w-full drop-shadow-md animate-climb-sway">
-                    <ellipse cx="30" cy="67" rx="13" ry="19" fill="#1f1f1f" transform="rotate(-28 30 67)" />
-                    <ellipse cx="77" cy="58" rx="13" ry="19" fill="#1f1f1f" transform="rotate(34 77 58)" />
-                    <ellipse cx="39" cy="96" rx="15" ry="19" fill="#1f1f1f" transform="rotate(-12 39 96)" />
-                    <ellipse cx="71" cy="93" rx="15" ry="19" fill="#1f1f1f" transform="rotate(18 71 93)" />
-                    <ellipse cx="56" cy="70" rx="28" ry="33" fill="#f6f2ea" />
-                    <circle cx="57" cy="34" r="23" fill="#f6f2ea" />
-                    <circle cx="41" cy="18" r="10" fill="#1f1f1f" />
-                    <circle cx="72" cy="18" r="10" fill="#1f1f1f" />
-                    <ellipse cx="48" cy="34" rx="7" ry="9" fill="#1f1f1f" transform="rotate(-12 48 34)" />
-                    <ellipse cx="65" cy="35" rx="7" ry="9" fill="#1f1f1f" transform="rotate(12 65 35)" />
-                    <circle cx="49" cy="35" r="2.4" fill="#ffffff" />
-                    <circle cx="65" cy="35" r="2.4" fill="#ffffff" />
-                    <ellipse cx="57" cy="44" rx="4.5" ry="3.2" fill="#1f1f1f" />
-                    <path d="M52 49 Q57 53 63 49" stroke="#1f1f1f" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-                    <path d="M42 55 Q31 49 25 40" stroke="#1f1f1f" strokeWidth="6" fill="none" strokeLinecap="round" />
-                    <path d="M69 58 Q81 55 87 47" stroke="#1f1f1f" strokeWidth="6" fill="none" strokeLinecap="round" />
-                  </svg>
+                <div className="relative">
+                  <img
+                    src="/panda.svg"
+                    alt="Panda"
+                    className="h-[74px] w-auto drop-shadow-md transition-transform duration-700 ease-out"
+                  />
+                  <div className="absolute left-full top-1/2 ml-2 -translate-y-1/2 rounded-md border border-primary/25 bg-white px-2 py-1 shadow-sm">
+                    <div className="text-xs font-medium text-primary">{savingsProgress.toFixed(0)}%</div>
+                  </div>
+                  {savingsProgress >= 100 ? (
+                    <div className="absolute -left-6 -top-16 w-[132px]">
+                      <div className="relative border-4 border-[#2f3b2f] bg-[#fffdf4] px-3 py-2 shadow-[4px_4px_0_#d9d2b6]">
+                        <div className="font-mono text-[10px] leading-4 text-[#2f3b2f]">
+                          You made it
+                          happen! 🎋
+                        </div>
+                        <div className="absolute bottom-[-12px] left-8 h-0 w-0 border-l-[10px] border-r-[6px] border-t-[12px] border-l-transparent border-r-transparent border-t-[#2f3b2f]" />
+                        <div className="absolute bottom-[-8px] left-[34px] h-0 w-0 border-l-[8px] border-r-[4px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#fffdf4]" />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-
-              <div
-                className="absolute -left-10 transition-all duration-700 ease-out sm:-left-12"
-                style={{ top: `${100 - savingsProgress}%` }}
-              >
-                <div className="bg-white border border-primary rounded px-2 py-1 shadow-sm">
-                  <div className="text-xs font-medium text-primary">{savingsProgress.toFixed(0)}%</div>
-                </div>
-              </div>
-
-              <style>{`
-                @keyframes climb-sway {
-                  0%, 100% { transform: translateY(0px) rotate(-3deg); }
-                  50% { transform: translateY(-2px) rotate(3deg); }
-                }
-                .animate-climb-sway {
-                  animation: climb-sway 2.4s ease-in-out infinite;
-                }
-              `}</style>
             </div>
 
-            <div className="mt-2 text-center">
+            {pinnedGoal ? (
+              <button
+                onClick={() => setShowContributionModal(true)}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                <PiggyBank className="size-4" />
+                {t("home.contribute")}
+              </button>
+            ) : null}
+
+            <div className="mt-4 w-full text-center">
               <div className="hidden text-xs text-muted-foreground sm:block">{t("home.start")}</div>
               <div className="hidden text-sm sm:block">{formatCurrency(0, currency)}</div>
-              <div className="mt-3 bg-accent/30 px-3 py-2 rounded-lg max-w-[140px]">
-                <p className="text-xs">
+              <div className="mt-4 rounded-xl bg-accent/30 px-4 py-3 text-center">
+                <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  Remaining to goal
+                </div>
+                <div className="mt-1 text-lg font-semibold text-primary">
+                  {pinnedGoal ? formatCurrency(Math.max(savingsGoal - currentSavings, 0), currency) : formatCurrency(0, currency)}
+                </div>
+                <p className="mt-1 text-xs">
                   {pinnedGoal
                     ? t("home.toGo", {
                         amount: formatCurrency(savingsGoal - currentSavings, currency),

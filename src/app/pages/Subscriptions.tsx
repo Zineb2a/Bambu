@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Edit2, X, Calendar, DollarSign, AlertCircle } from "lucide-react";
 import Layout from "../components/Layout";
+import StudentDiscountDetectorCard from "../components/StudentDiscountDetectorCard";
 import { useUserCurrency } from "../hooks/useUserCurrency";
 import { formatCurrency } from "../lib/currency";
 import { BRAND_LOGO_SRC } from "../lib/branding";
@@ -11,35 +12,37 @@ import {
   removeSubscription,
   updateSubscription,
 } from "../lib/finance";
+import { getUserSettings } from "../lib/settings";
+import { detectStudentDiscounts } from "../lib/studentDiscounts";
 import { useAuth } from "../providers/AuthProvider";
 import { useI18n } from "../providers/I18nProvider";
 import type { Subscription } from "../types/finance";
-
-const categories = [
-  "Entertainment",
-  "Music",
-  "AI Tools",
-  "Development",
-  "Productivity",
-  "Design",
-  "Education",
-  "Health & Fitness",
-  "News & Magazines",
-  "Gaming",
-  "Other",
-];
+import type { Transaction } from "../types/transactions";
+import { listTransactions } from "../lib/transactions";
+import {
+  normalizeMerchantName,
+  type StudentDiscountOpportunity,
+} from "../../shared/studentDiscountDetector";
 
 const emojis = ["🎬", "🎵", "🤖", "💻", "📝", "🎨", "🖼️", "📱", "🎮", "📚", "🏋️", "📰", "🎓", "☁️", "🔒", "📊"];
+
+const DEFAULT_SUBSCRIPTION_CATEGORY = "Other";
+const STUDENT_PRICE_TAX_BUFFER_RATE = 0.18;
+const STUDENT_PRICE_TAX_BUFFER_MIN = 1.5;
+
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
 
 const emptySubscription: Omit<Subscription, "userId" | "createdAt"> = {
   id: "",
   emoji: "📱",
   name: "",
-  category: "",
+  category: DEFAULT_SUBSCRIPTION_CATEGORY,
   monthlyCost: 0,
   currency: "USD",
   originalMonthlyCost: 0,
-  renewalDate: "",
+  renewalDate: getTodayDate(),
   hasStudentDiscount: false,
 };
 
@@ -48,7 +51,11 @@ export default function Subscriptions() {
   const { t } = useI18n();
   const currency = useUserCurrency();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [studentDiscounts, setStudentDiscounts] = useState<StudentDiscountOpportunity[]>([]);
+  const [userCountry, setUserCountry] = useState("US");
   const [isLoading, setIsLoading] = useState(true);
+  const [isDiscountDetectorLoading, setIsDiscountDetectorLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -57,7 +64,11 @@ export default function Subscriptions() {
   useEffect(() => {
     if (!user) {
       setSubscriptions([]);
+      setTransactions([]);
+      setStudentDiscounts([]);
+      setUserCountry("US");
       setIsLoading(false);
+      setIsDiscountDetectorLoading(false);
       return;
     }
 
@@ -67,9 +78,15 @@ export default function Subscriptions() {
       setIsLoading(true);
 
       try {
-        const data = await listSubscriptions(user.id);
+        const [subscriptionData, transactionData, settings] = await Promise.all([
+          listSubscriptions(user.id),
+          listTransactions(user.id),
+          getUserSettings(user.id),
+        ]);
         if (isMounted) {
-          setSubscriptions(data);
+          setSubscriptions(subscriptionData);
+          setTransactions(transactionData);
+          setUserCountry(settings.country ?? "US");
         }
       } finally {
         if (isMounted) {
@@ -85,12 +102,102 @@ export default function Subscriptions() {
     };
 
     window.addEventListener("financialDataChanged", reload);
+    window.addEventListener("transactionsChanged", reload);
+    window.addEventListener("settingsUpdated", reload);
 
     return () => {
       isMounted = false;
       window.removeEventListener("financialDataChanged", reload);
+      window.removeEventListener("transactionsChanged", reload);
+      window.removeEventListener("settingsUpdated", reload);
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setStudentDiscounts([]);
+      setIsDiscountDetectorLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadDiscounts = async () => {
+      setIsDiscountDetectorLoading(true);
+
+      try {
+        const opportunities = await detectStudentDiscounts({
+          transactions: [
+            ...transactions.map((transaction) => ({
+              id: transaction.id,
+              amount: transaction.originalAmount,
+              merchantName: transaction.name,
+              sourceType: "transaction" as const,
+              date: transaction.occurredOn,
+              category: transaction.category,
+              currency: transaction.currency,
+              type: transaction.type,
+              isRecurring: transaction.isRecurring,
+              recurringFrequency: transaction.recurringFrequency,
+            })),
+            ...subscriptions.map((subscription) => ({
+              id: `subscription-${subscription.id}`,
+              amount: subscription.originalMonthlyCost,
+              merchantName: subscription.name,
+              sourceType: "subscription" as const,
+              date: subscription.renewalDate,
+              category: subscription.category,
+              currency: subscription.currency,
+              type: "expense" as const,
+              isRecurring: true,
+              recurringFrequency: "monthly" as const,
+            })),
+          ],
+          country: userCountry,
+          displayCurrency: currency,
+        });
+
+        if (isMounted) {
+          const opportunitiesToShow = opportunities.filter((opportunity) => {
+            const matchingSubscription = subscriptions.find(
+              (subscription) =>
+                normalizeMerchantName(subscription.name) === normalizeMerchantName(opportunity.serviceName) ||
+                normalizeMerchantName(subscription.name) === opportunity.normalizedMerchant,
+            );
+
+            if (!matchingSubscription) {
+              return true;
+            }
+
+            if (matchingSubscription.hasStudentDiscount) {
+              return false;
+            }
+
+            const studentPriceWithTaxBuffer =
+              opportunity.studentPriceMonthly +
+              Math.max(
+                opportunity.studentPriceMonthly * STUDENT_PRICE_TAX_BUFFER_RATE,
+                STUDENT_PRICE_TAX_BUFFER_MIN,
+              );
+
+            return matchingSubscription.originalMonthlyCost > studentPriceWithTaxBuffer;
+          });
+
+          setStudentDiscounts(opportunitiesToShow);
+        }
+      } finally {
+        if (isMounted) {
+          setIsDiscountDetectorLoading(false);
+        }
+      }
+    };
+
+    void loadDiscounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currency, subscriptions, transactions, user, userCountry]);
 
   const totalMonthlyCost = subscriptions.reduce(
     (total, subscription) => total + getSubscriptionAmountInCurrency(subscription, currency),
@@ -98,14 +205,14 @@ export default function Subscriptions() {
   );
 
   const handleAddSubscription = async () => {
-    if (!user || !newSubscription.name || !newSubscription.category || !newSubscription.renewalDate) {
+    if (!user || !newSubscription.name || !newSubscription.renewalDate) {
       return;
     }
 
     const created = await createSubscription(user.id, {
       emoji: newSubscription.emoji,
       name: newSubscription.name,
-      category: newSubscription.category,
+      category: DEFAULT_SUBSCRIPTION_CATEGORY,
       monthlyCost: newSubscription.monthlyCost,
       currency,
       originalMonthlyCost: newSubscription.monthlyCost,
@@ -115,7 +222,10 @@ export default function Subscriptions() {
 
     setSubscriptions([...subscriptions, created]);
     setShowAddModal(false);
-    setNewSubscription(emptySubscription);
+    setNewSubscription({
+      ...emptySubscription,
+      renewalDate: getTodayDate(),
+    });
     window.dispatchEvent(new Event("financialDataChanged"));
   };
 
@@ -127,7 +237,7 @@ export default function Subscriptions() {
     const updated = await updateSubscription(user.id, editingSubscription.id, {
       emoji: editingSubscription.emoji,
       name: editingSubscription.name,
-      category: editingSubscription.category,
+      category: editingSubscription.category || DEFAULT_SUBSCRIPTION_CATEGORY,
       monthlyCost: editingSubscription.monthlyCost,
       currency,
       originalMonthlyCost: editingSubscription.monthlyCost,
@@ -171,7 +281,15 @@ export default function Subscriptions() {
             <p className="text-muted-foreground mt-1">{t("subscriptionsPage.subtitle")}</p>
           </div>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setNewSubscription({
+                ...emptySubscription,
+                currency,
+                originalMonthlyCost: 0,
+                renewalDate: getTodayDate(),
+              });
+              setShowAddModal(true);
+            }}
             className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
           >
             <Plus className="size-5" />
@@ -199,6 +317,12 @@ export default function Subscriptions() {
           </div>
         </div>
 
+        <StudentDiscountDetectorCard
+          opportunities={studentDiscounts}
+          currency={currency}
+          isLoading={isDiscountDetectorLoading}
+        />
+
         <div className="space-y-4">
           {isLoading ? (
             <div className="bg-card border border-border rounded-xl p-6 text-sm text-muted-foreground">
@@ -218,13 +342,13 @@ export default function Subscriptions() {
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold text-lg">{subscription.name}</h3>
-                        <p className="text-sm text-muted-foreground">{subscription.category}</p>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
                             setEditingSubscription({
                               ...subscription,
+                              category: subscription.category || DEFAULT_SUBSCRIPTION_CATEGORY,
                               monthlyCost: subscription.originalMonthlyCost,
                               currency,
                               originalMonthlyCost: subscription.originalMonthlyCost,
@@ -287,7 +411,13 @@ export default function Subscriptions() {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold">{t("subscriptionsPage.addSubscription")}</h3>
                 <button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewSubscription({
+                      ...emptySubscription,
+                      renewalDate: getTodayDate(),
+                    });
+                  }}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X className="size-5" />
@@ -323,22 +453,6 @@ export default function Subscriptions() {
                     placeholder={t("subscriptionsPage.subscriptionPlaceholder")}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">{t("subscriptionsPage.category")}</label>
-                  <select
-                    value={newSubscription.category}
-                    onChange={(e) => setNewSubscription({ ...newSubscription, category: e.target.value })}
-                    className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">{t("subscriptionsPage.selectCategory")}</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <div>
@@ -400,7 +514,13 @@ export default function Subscriptions() {
 
                 <div className="flex gap-3 pt-4">
                   <button
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setNewSubscription({
+                        ...emptySubscription,
+                        renewalDate: getTodayDate(),
+                      });
+                    }}
                     className="flex-1 bg-muted text-foreground px-4 py-3 rounded-lg hover:opacity-90 transition-opacity"
                   >
                     {t("subscriptionsPage.cancel")}
@@ -464,24 +584,6 @@ export default function Subscriptions() {
                     placeholder={t("subscriptionsPage.subscriptionPlaceholder")}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">{t("subscriptionsPage.category")}</label>
-                  <select
-                    value={editingSubscription.category}
-                    onChange={(e) =>
-                      setEditingSubscription({ ...editingSubscription, category: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">{t("subscriptionsPage.selectCategory")}</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <div>
