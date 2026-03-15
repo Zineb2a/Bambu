@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Expenses from "./pages/Expenses";
@@ -33,7 +33,7 @@ const AuthRoute = () => {
   return user ? <Navigate to="/" replace /> : <Auth />;
 };
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/auth",
     Component: AuthRoute,

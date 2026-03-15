@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { PlaidAccount, PlaidItem, PlaidTransaction } from "../types/plaid";
 import type { Transaction } from "../types/transactions";
+import { buildApiUrl, plaidApiAvailable } from "../lib/api";
 
 export type { PlaidAccount, PlaidItem, PlaidTransaction };
 
@@ -72,7 +73,7 @@ export function usePlaidData() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllTransactions = useCallback(async () => {
-    if (plaidItems.length === 0) {
+    if (!plaidApiAvailable || plaidItems.length === 0) {
       setAllTransactions([]);
       return;
     }
@@ -84,7 +85,11 @@ export function usePlaidData() {
 
     for (const item of plaidItems) {
       try {
-        const res = await fetch(`/api/plaid/transactions/${item.item_id}`);
+        const apiUrl = buildApiUrl(`/api/plaid/transactions/${item.item_id}`);
+        if (!apiUrl) {
+          break;
+        }
+        const res = await fetch(apiUrl);
         const data = await res.json();
         if (data.transactions) {
           allTxns.push(...data.transactions);

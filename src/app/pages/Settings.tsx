@@ -50,6 +50,7 @@ import type { LinkedCard } from "../types/settings";
 import type { PlaidAccount, PlaidItem, PlaidTransaction } from "../types/plaid";
 import { formatCategoryName, getCategoryColor } from "../hooks/usePlaidData";
 import { getCategoryIcon } from "../lib/categoryIcons";
+import { buildApiUrl, plaidApiAvailable } from "../lib/api";
 
 const languages = SUPPORTED_LANGUAGES;
 
@@ -486,7 +487,12 @@ export default function Settings() {
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
-    fetch("/api/plaid/create-link-token", { method: "POST" })
+    const apiUrl = buildApiUrl("/api/plaid/create-link-token");
+    if (!apiUrl) {
+      return;
+    }
+
+    fetch(apiUrl, { method: "POST" })
       .then((r) => r.json())
       .then((data) => {
         if (data.link_token) setLinkToken(data.link_token);
@@ -501,9 +507,16 @@ export default function Settings() {
   }, [plaidItems, selectedItemId]);
 
   const fetchTransactions = useCallback(async (itemId: string) => {
+    const apiUrl = buildApiUrl(`/api/plaid/transactions/${itemId}`);
+    if (!apiUrl) {
+      setTransactions([]);
+      setPlaidError("Plaid backend is not configured for this deployment.");
+      return;
+    }
+
     setIsLoadingTransactions(true);
     try {
-      const res = await fetch(`/api/plaid/transactions/${itemId}`);
+      const res = await fetch(apiUrl);
       const data = await res.json();
       if (data.transactions) setTransactions(data.transactions);
     } catch {
@@ -518,10 +531,16 @@ export default function Settings() {
   }, [selectedItemId, fetchTransactions]);
 
   const handlePlaidSuccess = async (publicToken: string) => {
+    const apiUrl = buildApiUrl("/api/plaid/exchange-token");
+    if (!apiUrl) {
+      setPlaidError("Plaid backend is not configured for this deployment.");
+      return;
+    }
+
     setIsLinking(true);
     setPlaidError(null);
     try {
-      const res = await fetch("/api/plaid/exchange-token", {
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ public_token: publicToken }),
@@ -546,7 +565,10 @@ export default function Settings() {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      await fetch(`/api/plaid/item/${itemId}`, { method: "DELETE" });
+      const apiUrl = buildApiUrl(`/api/plaid/item/${itemId}`);
+      if (apiUrl) {
+        await fetch(apiUrl, { method: "DELETE" });
+      }
     } catch {
       // Server might be down -- still clean up locally
     }
@@ -853,9 +875,14 @@ export default function Settings() {
                 {isLinking ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
                 {isLinking ? "Linking..." : "Link Your Bank Account"}
               </PlaidLinkButton>
-              {!linkToken && (
+              {!plaidApiAvailable && (
                 <p className="text-xs text-muted-foreground mt-3">
-                  Make sure the backend server is running: <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">cd server && node index.js</code>
+                  Plaid is disabled on this static deployment. Set <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">VITE_API_BASE_URL</code> to your hosted backend URL to enable it.
+                </p>
+              )}
+              {plaidApiAvailable && !linkToken && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Make sure the Plaid backend is reachable and returning a link token.
                 </p>
               )}
             </div>

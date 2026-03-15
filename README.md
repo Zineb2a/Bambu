@@ -44,6 +44,18 @@ cp .env.example .env
 npm run dev
 ```
 
+## GitHub Pages
+
+This repo can be deployed to GitHub Pages as a static frontend. The included workflow is at [.github/workflows/deploy-pages.yml](/Users/zineb/Documents/GitHub/Bambu/.github/workflows/deploy-pages.yml).
+
+Set these repository secrets before deploying:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_API_BASE_URL` (optional, only if you host the Plaid backend elsewhere)
+
+If `VITE_API_BASE_URL` is not set, the app still deploys, but Plaid bank-linking features are disabled on GitHub Pages.
+
 ## Supabase Setup
 
 1. Create or open a Supabase project.
