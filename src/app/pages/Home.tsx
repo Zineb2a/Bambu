@@ -370,32 +370,32 @@ export default function Home() {
           <p className="text-muted-foreground">{t("home.overview")}</p>
         </div>
 
-        <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-lg">
-          <div className="flex items-center gap-2 mb-2 opacity-90">
-            <Wallet className="size-5" />
-            <span className="text-sm">{t("home.totalBalance")}</span>
-          </div>
-          <div className="text-4xl mb-4">{formatCurrency(balance, currency)}</div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="size-4" />
-                <span className="text-xs opacity-90">{t("home.income")}</span>
-              </div>
-              <div className="text-xl">{formatCurrency(monthlyIncome, currency)}</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingDown className="size-4" />
-                <span className="text-xs opacity-90">{t("home.expenses")}</span>
-              </div>
-              <div className="text-xl">{formatCurrency(monthlyExpenses, currency)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex-1 space-y-6">
+            <div className="bg-primary text-white rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center gap-2 mb-2 opacity-90">
+                <Wallet className="size-5" />
+                <span className="text-sm">{t("home.totalBalance")}</span>
+              </div>
+              <div className="text-4xl mb-4">{formatCurrency(balance, currency)}</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="size-4" />
+                    <span className="text-xs opacity-90">{t("home.income")}</span>
+                  </div>
+                  <div className="text-xl">{formatCurrency(monthlyIncome, currency)}</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingDown className="size-4" />
+                    <span className="text-xs opacity-90">{t("home.expenses")}</span>
+                  </div>
+                  <div className="text-xl">{formatCurrency(monthlyExpenses, currency)}</div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">{t("home.view")}</span>
@@ -605,10 +605,11 @@ export default function Home() {
                 )}
               </div>
             </div>
+
           </div>
 
-          <div className="bg-card rounded-xl p-6 shadow-sm border border-border flex flex-col items-center" style={{ minHeight: "calc(100vh - 450px)" }}>
-            <div className="mb-4 text-center">
+          <div className="w-full self-stretch bg-card rounded-xl p-5 shadow-sm border border-border flex flex-col items-center lg:w-[260px] lg:flex-shrink-0 lg:self-start">
+            <div className="mb-2 text-center">
               <div className="w-20 h-20 bg-accent rounded-2xl flex items-center justify-center shadow-md mb-2">
                 <span className="text-3xl">{pinnedGoal?.emoji ?? "🎯"}</span>
               </div>
@@ -617,7 +618,7 @@ export default function Home() {
               {pinnedGoal ? (
                 <button
                   onClick={() => setShowContributionModal(true)}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition-opacity"
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition-opacity"
                 >
                   <PiggyBank className="size-4" />
                   {t("home.contribute")}
@@ -625,10 +626,27 @@ export default function Home() {
               ) : null}
             </div>
 
-            <div className="relative flex-1 w-16 min-h-[400px] overflow-visible">
-              <div className="absolute bottom-0 left-1/2 h-full w-16 -translate-x-1/2 rounded-[999px] bg-[#eef1e6] shadow-inner border border-[#d8ddcc]" />
+            <div className="mb-4 w-full sm:hidden">
+              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{t("home.start")}</span>
+                <span>{savingsProgress.toFixed(0)}%</span>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(savingsProgress, 100)}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span>{formatCurrency(0, currency)}</span>
+                <span className="text-primary">{formatCurrency(savingsGoal, currency)}</span>
+              </div>
+            </div>
 
-              <div className="absolute bottom-0 left-1/2 h-full w-8 -translate-x-1/2 rounded-[999px] border border-[#5b8d3a] bg-gradient-to-b from-[#a8d86d] via-[#78b94f] to-[#4d8731] shadow-[inset_-6px_0_8px_rgba(255,255,255,0.28),inset_8px_0_12px_rgba(0,0,0,0.14)]">
+            <div className="relative hidden w-14 min-h-[240px] origin-top overflow-visible sm:block sm:w-16 sm:min-h-[300px]">
+              <div className="absolute bottom-0 left-1/2 h-full w-14 -translate-x-1/2 rounded-[999px] bg-[#eef1e6] shadow-inner border border-[#d8ddcc] sm:w-16" />
+
+              <div className="absolute bottom-0 left-1/2 h-full w-7 -translate-x-1/2 rounded-[999px] border border-[#5b8d3a] bg-gradient-to-b from-[#a8d86d] via-[#78b94f] to-[#4d8731] shadow-[inset_-6px_0_8px_rgba(255,255,255,0.28),inset_8px_0_12px_rgba(0,0,0,0.14)] sm:w-8">
                 <div className="absolute inset-y-0 left-[42%] w-[2px] bg-white/20" />
                 <div className="absolute left-0 right-0 top-[12%] h-[6px] rounded-full bg-[#628d3e]" />
                 <div className="absolute left-0 right-0 top-[28%] h-[6px] rounded-full bg-[#628d3e]" />
@@ -639,21 +657,21 @@ export default function Home() {
               </div>
 
               <div className="absolute left-1/2 top-[10%] -translate-x-[18px] -translate-y-1/2 rotate-[-28deg]">
-                <svg width="70" height="42" viewBox="0 0 100 60" className="drop-shadow-sm">
+                <svg width="58" height="34" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[42px] sm:w-[70px]">
                   <path d="M95 50C77 48 62 43 46 31C32 20 20 11 6 7C14 23 27 35 43 43C59 51 76 54 95 50Z" fill="#4b9847" />
                   <path d="M87 46C71 43 57 37 43 25" stroke="#a8df8c" strokeWidth="2.5" fill="none" strokeLinecap="round" />
                 </svg>
               </div>
 
               <div className="absolute left-1/2 top-[34%] translate-x-[12px] -translate-y-1/2 rotate-[24deg]">
-                <svg width="72" height="44" viewBox="0 0 100 60" className="drop-shadow-sm">
+                <svg width="60" height="36" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[44px] sm:w-[72px]">
                   <path d="M6 52C24 49 39 43 55 31C69 20 81 11 95 7C87 24 74 36 58 44C42 52 25 55 6 52Z" fill="#4f9f4c" />
                   <path d="M14 47C30 43 44 37 58 25" stroke="#b4e79a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
                 </svg>
               </div>
 
               <div className="absolute left-1/2 top-[58%] -translate-x-[20px] -translate-y-1/2 rotate-[-24deg] opacity-90">
-                <svg width="64" height="38" viewBox="0 0 100 60" className="drop-shadow-sm">
+                <svg width="52" height="32" viewBox="0 0 100 60" className="drop-shadow-sm sm:h-[38px] sm:w-[64px]">
                   <path d="M95 50C77 48 62 43 46 31C32 20 20 11 6 7C14 23 27 35 43 43C59 51 76 54 95 50Z" fill="#58ab52" />
                   <path d="M87 46C71 43 57 37 43 25" stroke="#c4efab" strokeWidth="2.3" fill="none" strokeLinecap="round" />
                 </svg>
@@ -663,7 +681,7 @@ export default function Home() {
                 className="absolute left-1/2 -translate-x-[58%] transition-all duration-700 ease-out"
                 style={{ bottom: `${Math.max(savingsProgress - 4, 0)}%` }}
               >
-                <div className="relative h-[92px] w-[88px]">
+                <div className="relative h-[78px] w-[74px] sm:h-[92px] sm:w-[88px]">
                   <svg viewBox="0 0 110 110" className="h-full w-full drop-shadow-md animate-climb-sway">
                     <ellipse cx="30" cy="67" rx="13" ry="19" fill="#1f1f1f" transform="rotate(-28 30 67)" />
                     <ellipse cx="77" cy="58" rx="13" ry="19" fill="#1f1f1f" transform="rotate(34 77 58)" />
@@ -686,7 +704,7 @@ export default function Home() {
               </div>
 
               <div
-                className="absolute -left-12 transition-all duration-700 ease-out"
+                className="absolute -left-10 transition-all duration-700 ease-out sm:-left-12"
                 style={{ top: `${100 - savingsProgress}%` }}
               >
                 <div className="bg-white border border-primary rounded px-2 py-1 shadow-sm">
@@ -705,9 +723,9 @@ export default function Home() {
               `}</style>
             </div>
 
-            <div className="mt-4 text-center">
-              <div className="text-xs text-muted-foreground">{t("home.start")}</div>
-              <div className="text-sm">{formatCurrency(0, currency)}</div>
+            <div className="mt-2 text-center">
+              <div className="hidden text-xs text-muted-foreground sm:block">{t("home.start")}</div>
+              <div className="hidden text-sm sm:block">{formatCurrency(0, currency)}</div>
               <div className="mt-3 bg-accent/30 px-3 py-2 rounded-lg max-w-[140px]">
                 <p className="text-xs">
                   {pinnedGoal
