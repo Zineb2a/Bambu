@@ -1,42 +1,221 @@
 # Bambuu
 
-Bambuu is a student-first personal finance app built for hackathon demos. It helps users track income and expenses, manage recurring transactions, set savings goals, watch subscriptions, and understand their money through a cleaner, more guided experience than a generic budgeting spreadsheet.
+Bambuu is a personal finance platform designed for students and early-career users who do not fit the assumptions of traditional budgeting apps.
 
-## Why Bambuu
+Most finance products are built around fixed monthly salaries, stable expenses, and long financial histories. Bambuu is built for a different reality: part-time jobs, scholarships, allowances, recurring subscriptions, irregular spending, savings goals, and constant tradeoffs between short-term needs and long-term priorities.
 
-Students often manage money across part-time jobs, scholarships, allowances, subscriptions, and irregular spending, but most finance tools are built for full-time salaried users. Bambuu is designed around that reality:
+## Business Case
 
-- recurring income and expenses, including `biweekly` income
-- goal-based saving with pinned priorities
-- budget category tracking
-- subscription visibility
-- analytics and trend views
-- student discount detection opportunities
-- bilingual support in English and French
+### The Problem
 
-## What It Does
+Students and young adults are financially active, but financially underserved.
 
-- `Home`: balance overview, income vs expenses, charts, pinned savings goal
-- `Transactions`: searchable ledger with filters, exports, and recurring transaction visibility
-- `Recurring Transactions`: create, edit, pause, resume, and delete recurring entries
-- `Budget & Goals`: manage savings goals, contributions, and budget categories
-- `Income` / `Expenses`: focused views by transaction type
-- `Subscriptions`: track monthly services and surface discount opportunities
-- `Analytics`: spending trends, savings rate, budget comparisons, category analysis
-- `Investments`: educational portfolio tracking experience
-- `Settings`: user preferences including language, currency, and notifications
+They often manage:
 
-## Hackathon Highlights
+- multiple income sources instead of one salary
+- non-monthly pay cycles such as `biweekly` wages
+- recurring subscriptions that quietly drain cash
+- short-term saving goals with high emotional importance
+- inconsistent spending patterns month to month
+- little visibility into what is actually safe to spend
 
-- Real auth and persistence with Supabase
-- Row-level security policies for per-user data isolation
-- Recurring transaction support including `daily`, `weekly`, `biweekly`, `monthly`, and `yearly`
-- Multi-currency support with original and display values
-- Student discount detection pipeline using shared detector logic and Supabase Edge Functions fallback
-- Notification system for income, budgets, goals, and subscriptions
-- Mobile-friendly React app with a polished dashboard-style UI
+Traditional budgeting tools usually feel too rigid, too corporate, or too complex for this segment. Bambuu addresses that gap with a product that is more visual, more guided, and more aligned with how younger users actually manage money.
 
-## Tech Stack
+### The Opportunity
+
+Bambuu sits at the intersection of:
+
+- personal finance
+- student life
+- subscription management
+- financial habit building
+- savings motivation
+
+The product can position itself as a financial operating system for students:
+
+- track what comes in
+- understand what goes out
+- stay ahead of recurring payments
+- build savings discipline
+- surface cost-saving opportunities
+
+This creates room for a differentiated product that is practical on day one and expandable into a larger fintech or education-finance platform over time.
+
+## Product Positioning
+
+Bambuu is not just a budgeting app.
+
+It is a student-first money management experience focused on clarity, action, and progress.
+
+Its value proposition is:
+
+> Help users understand their cash flow, manage recurring financial behavior, and make better day-to-day money decisions without needing a finance background.
+
+## Core Product Features
+
+### 1. Unified Financial Dashboard
+
+The home dashboard gives users an immediate snapshot of:
+
+- total balance
+- income vs expenses
+- recent transactions
+- category-level spending patterns
+- pinned savings goal progress
+
+This makes Bambuu feel actionable from the first screen rather than forcing users to navigate multiple pages to understand their situation.
+
+### 2. Transaction Tracking
+
+Users can record and manage:
+
+- income
+- expenses
+- recurring transactions
+- multi-currency entries
+
+The transaction system supports:
+
+- search
+- filters
+- exports
+- editing and deletion
+- recurring visibility directly in the ledger
+
+This is especially important for users with mixed cash flow sources like wages, scholarships, family support, and side income.
+
+### 3. Recurring Transaction Management
+
+Recurring behavior is a core financial driver, so Bambuu treats it as a first-class feature rather than a side option.
+
+Supported recurring frequencies include:
+
+- `daily`
+- `weekly`
+- `biweekly`
+- `monthly`
+- `yearly`
+
+Users can:
+
+- create recurring income and expenses
+- edit them
+- pause and resume them
+- view them in a dedicated recurring screen
+
+This makes Bambuu more realistic for students who are paid biweekly and billed monthly.
+
+### 4. Savings Goals
+
+Savings is not presented as an abstract number. It is tied to named goals with visual identity and progress tracking.
+
+Users can:
+
+- create multiple savings goals
+- assign emojis for quick recognition
+- pin the most important goal
+- track progress through contributions
+- see remaining amount at a glance
+
+This shifts the product from expense tracking to forward-looking money behavior, which improves retention and emotional engagement.
+
+### 5. Budget Categories
+
+Bambuu allows users to define category budgets and compare them against real spending.
+
+This helps users answer:
+
+- where money is going
+- which categories are getting out of control
+- how spending compares against personal limits
+
+The product is therefore useful not just for recordkeeping, but for spending control.
+
+### 6. Subscription Oversight
+
+Recurring digital services are a major leak in student budgets. Bambuu provides subscription tracking so users can see:
+
+- what they are subscribed to
+- how much those subscriptions cost monthly
+- when renewals are coming up
+
+This adds immediate practical value and supports a strong consumer-facing use case.
+
+### 7. Analytics and Insight Layer
+
+Bambuu includes a real analytics surface, not just static totals.
+
+Users can explore:
+
+- spending vs income trends
+- savings rate
+- category breakdowns
+- budget comparisons
+- time-based financial patterns
+
+That gives the product a more premium feel and makes it easier to justify as a decision-support tool rather than a basic tracker.
+
+### 8. Student Discount Discovery
+
+One of Bambuu's strongest differentiation angles is cost reduction, not just cost tracking.
+
+The app can surface student discount opportunities based on recurring services and known patterns. That turns Bambuu into a product that can actively help users save money, not only observe spending.
+
+This is strategically important because it opens a path toward:
+
+- affiliate partnerships
+- student-focused offer ecosystems
+- subscription optimization flows
+
+## Why Bambuu Is Different
+
+Most budgeting apps optimize for older users with stable income.
+
+Bambuu is differentiated by focusing on:
+
+- non-traditional income schedules like `biweekly` pay
+- younger users with dynamic, uneven cash flow
+- visual goal-based saving
+- subscription awareness
+- bilingual accessibility
+- actionable, not overly technical, financial UX
+
+It is more approachable than enterprise-style finance tools and more useful than a simple expense logger.
+
+## Target Users
+
+Primary audience:
+
+- university students
+- college students
+- recent graduates
+- part-time workers
+- scholarship-supported users
+- young adults building money habits for the first time
+
+Secondary audience:
+
+- parents helping students manage budgets
+- early-career users with unstable income
+- financially conscious subscription-heavy consumers
+
+## Product Scope Today
+
+Bambuu currently includes:
+
+- authentication with Supabase Auth
+- persistent user financial data
+- recurring transaction support
+- transactions, income, and expense views
+- savings goals and contributions
+- category budgets
+- subscriptions
+- analytics dashboards
+- notifications
+- settings and profile management
+- English and French localization
+
+## Technology Stack
 
 - `React`
 - `TypeScript`
@@ -45,124 +224,105 @@ Students often manage money across part-time jobs, scholarships, allowances, sub
 - `Supabase Auth`
 - `Supabase Postgres`
 - `Supabase Edge Functions`
-- `Recharts`
 - `Tailwind CSS`
+- `Recharts`
 - `date-fns`
 
-## Project Structure
+## Architecture Summary
 
 ```text
 src/
   app/
-    pages/           Main product screens
-    components/      Reusable UI and feature components
-    lib/             Data access, currency, notifications, finance logic
+    pages/           Product surfaces
+    components/      UI and feature components
+    lib/             Finance, currency, notifications, settings, transactions
     providers/       Auth and i18n providers
-    types/           Shared app types
+    types/           Shared domain types
   lib/
-    supabase.ts      Supabase client setup
+    supabase.ts      Supabase client configuration
 
 supabase/
-  schema.sql         Database schema, policies, triggers
-  functions/server/  Edge function code
+  schema.sql         Database schema, triggers, policies
+  functions/server/  Serverless logic
 ```
 
 ## Local Setup
 
-### 1. Install dependencies
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Set up environment variables
-
-Create a local env file from the example:
+### Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-This app uses Vite, so client env vars must start with `VITE_`.
-
-Required values:
+Required client-side variables:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-### 3. Set up Supabase
+### Set up Supabase
 
 1. Create or open a Supabase project.
 2. Run the SQL in [supabase/schema.sql](/Users/zineb/Documents/GitHub/Bambu/supabase/schema.sql).
-3. Make sure the `transactions` table and policies are created.
-4. For smoother local testing, you can disable email confirmation in Supabase Auth.
+3. Confirm Auth is enabled.
+4. For easier local development, you can disable email confirmation in Supabase Auth.
 
-### 4. Start the app
+### Start the app
 
 ```bash
 npm run dev
 ```
 
-### 5. Production build
+### Build the app
 
 ```bash
 npm run build
 ```
 
-## Demo Flow
+## Data Model
 
-If you are presenting Bambuu in a hackathon demo, this is the fastest walkthrough:
+Bambuu persists:
 
-1. Sign up or log in with Supabase Auth.
-2. Add an income transaction and mark it recurring.
-3. Add a `biweekly` recurring income to show non-monthly pay cycles.
-4. Add a spending category and a savings goal.
-5. Pin a goal and show it on the home dashboard.
-6. Open analytics to show spending vs income trends.
-7. Open subscriptions to show recurring service tracking and student discount opportunities.
+- `profiles`
+- `transactions`
+- `savings_goals`
+- `goal_contributions`
+- `budget_categories`
+- `subscriptions`
+- `investments`
+- `user_settings`
+- `linked_cards`
+- `notifications`
 
-## Data Model Notes
+The schema includes:
 
-The app persists:
+- sign-up provisioning trigger
+- row-level security policies
+- recurring transaction support
+- goal contribution history
+- notification persistence
 
-- profiles
-- transactions
-- savings goals
-- goal contributions
-- budget categories
-- subscriptions
-- investments
-- user settings
-- linked cards
-- notifications
+## Strategic Expansion Paths
 
-The schema also includes:
+Bambuu can evolve beyond budgeting into a larger financial product through:
 
-- auth trigger for provisioning profile and settings on sign-up
-- row-level security for all user-owned tables
-- recurring transaction fields on `transactions`
+- bank and card integrations
+- smarter recurring cash flow forecasting
+- savings automation
+- student discount partnerships
+- embedded financial education
+- premium analytics
+- subscription switching and optimization flows
 
-## Known Constraints
+## Summary
 
-- This is a hackathon-style product, so some advanced financial calculations are simplified.
-- External bank syncing is not enabled yet.
-- Student discount detection depends on the bundled detector logic and serverless integration path.
+Bambuu is a credible consumer finance product aimed at a segment that is large, active, and poorly served by traditional budgeting software.
 
-## Why This Is Demo-Ready
+Its strength is not just that it tracks money. Its strength is that it understands how younger users earn, spend, save, and decide.
 
-- Clear problem and target audience
-- Real authentication and persistence
-- Multiple product surfaces beyond a single dashboard
-- Strong feature story around recurring student income, subscriptions, and saving goals
-- Enough backend structure to feel like a real product, not just a UI mock
-
-## Team Notes
-
-If you continue building this after the hackathon, the next strong improvements would be:
-
-- transaction recurrence generation on the backend
-- better migration management for Supabase schema changes
-- automated tests for finance calculations
-- richer recurring rules and reminders
-- stronger CSV/import workflows
-
+That makes it a stronger business proposition than a generic expense tracker and a better product foundation for long-term growth.
