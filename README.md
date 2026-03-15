@@ -1,19 +1,30 @@
-# Bambuu
+<p align="center">
+  <img src="public/logo.svg" alt="Bambuu logo" width="160" />
+</p> 
+
+## Bambuu 🎍
 
 Bambuu is a student-focused personal finance app built for users with irregular income, recurring subscriptions, and short-term savings goals.
 
-Unlike traditional budgeting tools built around fixed monthly salaries, Bambuu is designed for part-time jobs, scholarships, allowances, and real student spending behavior.
+Unlike traditional budgeting tools built around fixed monthly salaries, Bambuu is designed for part-time jobs, scholarships, allowances, and real student spending behaviour.
 
-## What Bambuu Offers
+Check it out here: https://bambuu.me/
 
-- transaction tracking for income and expenses
-- recurring transactions, including `biweekly` income
-- savings goals with pinned priorities
-- budget category tracking
-- subscription management
-- analytics and spending trends
-- student discount opportunity detection
-- English and French support
+##  🍀 Key features 
+
+- Transaction tracking for income and expenses
+- Recurring transactions, including `biweekly` income
+- Let users set specific savings goals and track progress (Our panda climbs each time you save!) with pinned priorities
+- Budget category tracking
+- Subscription management
+- Advanced Data Visualisation and Spending Tips
+- Student discount opportunity detection
+- Investment insights: Tracking, Learning, and Tips
+- Supports Different Currencies
+- Bilingual Support (English/French)
+- Transaction management and categorisation
+- Dark Mode
+- Clean and intuitive UI
 
 ## Why It Matters
 
@@ -27,7 +38,7 @@ Bambuu helps users answer the questions that matter most:
 
 This makes Bambuu more than an expense tracker. It is a practical money management product for a segment that is often underserved by traditional finance apps.
 
-## Stack
+## 🛠️ Stack
 
 - `React`
 - `TypeScript`
@@ -35,9 +46,6 @@ This makes Bambuu more than an expense tracker. It is a practical money manageme
 - `Supabase`
 - `Tailwind CSS`
 - `Recharts`
-
-## Check it out here!!
-Bambuu: https://bambuu.me/
 
 ## Run Locally
 
@@ -80,6 +88,14 @@ Bambuu currently includes:
 - notifications
 - analytics
 - settings
+
+## Future Developments? 
+- Mobile app version using React Native for iOS and Android
+- Banking API integration for automatic transaction import
+- Enhanced discount detection with location-based offers near campuses
+- Peer savings challenges to make financial goals social and motivating
+- Financial literacy content tailored to student life stages
+- Expense splitting features for group living situations and shared subscriptions
 
 ## Summary
 
