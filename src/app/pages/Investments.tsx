@@ -330,13 +330,6 @@ export default function Investments() {
     return suggestions.slice(0, 3);
   }, [bondShare, cryptoShare, etfShare, largestTypeShare, portfolioWithTotals.length, t, totalGain]);
 
-  const connectionProviders = [
-    "Coinbase",
-    "Binance",
-    "Wealthsimple",
-    "Robinhood",
-  ];
-
   const getSuggestionClasses = (tone: SuggestionTone) => {
     switch (tone) {
       case "warning":
@@ -547,21 +540,8 @@ export default function Investments() {
                 <p className="text-sm text-muted-foreground mb-4">
                   {t("investmentsPage.connectionsDescription")}
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {connectionProviders.map((provider) => (
-                    <div
-                      key={provider}
-                      className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-3 text-sm"
-                    >
-                      <div className="font-medium">{provider}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {t("investmentsPage.comingSoon")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-sm text-muted-foreground">
-                  {t("investmentsPage.connectionsNote")}
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-8 text-center">
+                  <div className="text-base font-medium">{t("investmentsPage.comingSoon")}</div>
                 </div>
               </div>
             </div>
